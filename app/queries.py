@@ -98,6 +98,42 @@ def get_month_summary(year: int | None = None, month: int | None = None) -> dict
     return row
 
 
+def get_month_insights(year: int | None = None, month: int | None = None) -> dict[str, Any]:
+    start, end = selected_month_range(year, month)
+    previous_end = start
+    if start.month == 1:
+        previous_start = date(start.year - 1, 12, 1)
+    else:
+        previous_start = date(start.year, start.month - 1, 1)
+
+    current = get_month_summary(start.year, start.month)
+    previous = get_month_summary(previous_start.year, previous_start.month)
+    days_elapsed = max(1, min((date.today() - start).days + 1, (end - start).days))
+    average_daily_expense = float(current.get("total_expenses") or 0) / days_elapsed
+
+    annual = fetch_one(
+        f"""
+        SELECT
+            COALESCE(SUM(CASE WHEN LOWER(tipo) IN ({type_placeholders(EXPENSE_TYPES)}) THEN cantidad ELSE 0 END), 0) AS annual_expenses,
+            COALESCE(SUM(CASE WHEN LOWER(tipo) IN ({type_placeholders(INCOME_TYPES)}) THEN cantidad ELSE 0 END), 0) AS annual_income,
+            COUNT(*) AS annual_movements
+        FROM movimientos
+        WHERE created_at >= %s AND created_at < %s
+        """,
+        (*EXPENSE_TYPES, *INCOME_TYPES, date(start.year, 1, 1), date(start.year + 1, 1, 1)),
+    ) or {}
+
+    top_categories = get_expenses_by_category(start_date=start, end_date=end)[:5]
+    return {
+        "current": current,
+        "previous": previous,
+        "previous_period": {"start": previous_start.isoformat(), "end": previous_end.isoformat()},
+        "average_daily_expense": average_daily_expense,
+        "annual": annual,
+        "top_categories": top_categories,
+    }
+
+
 def get_recent_movements(limit: int = 10) -> list[dict[str, Any]]:
     limit = max(1, min(limit, 100))
     return fetch_all(
@@ -159,6 +195,44 @@ def get_movements(
         LIMIT %s OFFSET %s
         """,
         (*params, limit, offset),
+    )
+
+
+def get_export_movements(
+    start_date: date | None = None,
+    end_date: date | None = None,
+    category: str | None = None,
+    movement_type: str | None = None,
+    limit: int = 10000,
+) -> list[dict[str, Any]]:
+    limit = max(1, min(limit, 10000))
+    where_sql, params = build_movement_filters(
+        start_date=start_date,
+        end_date=end_date,
+        category=category,
+        movement_type=movement_type,
+    )
+
+    return fetch_all(
+        f"""
+        SELECT
+            id,
+            tipo,
+            cantidad,
+            moneda,
+            categoria,
+            subcategoria,
+            concepto,
+            metodo_pago,
+            cuenta,
+            nota,
+            created_at
+        FROM movimientos
+        {where_sql}
+        ORDER BY created_at DESC, id DESC
+        LIMIT %s
+        """,
+        (*params, limit),
     )
 
 

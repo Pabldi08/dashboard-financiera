@@ -1,0 +1,45 @@
+services:
+  db:
+    image: mariadb:11
+    container_name: dashboard-financiera-db
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  dashboard-financiera:
+    build: .
+    container_name: dashboard-financiera
+    env_file:
+      - .env
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  telegram-worker:
+    build: .
+    container_name: dashboard-financiera-telegram
+    env_file:
+      - .env
+    command: ["python", "-m", "app.telegram_worker"]
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - telegram
+    restart: unless-stopped
+
+volumes:
+  mariadb-data:

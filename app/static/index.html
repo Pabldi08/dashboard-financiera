@@ -4,17 +4,35 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>dashboard financiera</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/styles.css?v=20260514-banks">
     <script src="/static/vendor/chart.umd.min.js" defer></script>
-    <script src="/static/js/dashboard.js" defer></script>
+    <script src="/static/js/dashboard.js?v=20260514-banks" defer></script>
   </head>
-  <body>
-    <header class="topbar">
+  <body class="auth-login">
+    <section class="login-view" id="loginView">
+      <form class="login-card" id="loginForm">
+        <p class="eyebrow">Acceso privado</p>
+        <h1>Dashboard financiera</h1>
+        <div class="field">
+          <label for="loginUser">Usuario</label>
+          <input id="loginUser" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label for="loginPassword">Contraseña</label>
+          <input id="loginPassword" type="password" autocomplete="current-password" required>
+        </div>
+        <button type="submit">Entrar</button>
+        <p class="form-message" id="loginMessage"></p>
+      </form>
+    </section>
+
+    <header class="topbar app-shell">
       <div>
         <p class="eyebrow">Finanzas personales</p>
         <h1>Dashboard financiera</h1>
       </div>
       <div class="header-actions">
+        <button type="button" class="secondary" id="logoutButton">Salir</button>
         <button type="button" class="theme-toggle" id="themeToggle" aria-label="Cambiar tema" aria-pressed="true">
           <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="12" r="4"></circle>
@@ -35,7 +53,7 @@
       </div>
     </header>
 
-    <main class="layout">
+    <main class="layout app-shell">
       <section class="summary-grid" aria-label="Resumen mensual">
         <article class="metric metric-expense">
           <span class="metric-label">Gasto del mes</span>
@@ -53,9 +71,21 @@
           <span class="metric-label">Movimientos del mes</span>
           <strong id="movementCount">--</strong>
         </article>
+        <article class="metric">
+          <span class="metric-label">Media diaria</span>
+          <strong id="dailyAverage">--</strong>
+        </article>
+        <article class="metric">
+          <span class="metric-label">Gasto anual</span>
+          <strong id="annualExpenses">--</strong>
+        </article>
       </section>
 
       <section class="toolbar" aria-label="Filtros">
+        <div class="field">
+          <label for="monthFilter">Mes</label>
+          <input type="month" id="monthFilter">
+        </div>
         <div class="field">
           <label for="startDate">Desde</label>
           <input type="date" id="startDate">
@@ -79,7 +109,84 @@
         <div class="actions">
           <button type="button" id="applyFilters">Aplicar</button>
           <button type="button" class="secondary" id="resetFilters">Limpiar</button>
+          <button type="button" class="secondary export-button" id="exportExcel">
+            <img src="/static/vendor/microsoft-excel.svg" alt="" aria-hidden="true">
+            Excel
+          </button>
         </div>
+      </section>
+
+      <section class="content-grid">
+        <article class="panel">
+          <div class="panel-heading">
+            <h2>Nuevo movimiento</h2>
+            <span class="muted" id="movementFormMode">Alta manual</span>
+          </div>
+          <form class="movement-form" id="movementForm">
+            <input type="hidden" id="movementId">
+            <div class="field">
+              <label for="movementType">Tipo</label>
+              <select id="movementType" required>
+                <option value="gasto">Gasto</option>
+                <option value="ingreso">Ingreso</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="movementAmount">Cantidad</label>
+              <input id="movementAmount" type="number" step="0.01" min="0.01" required>
+            </div>
+            <div class="field">
+              <label for="movementDate">Fecha</label>
+              <input id="movementDate" type="datetime-local">
+            </div>
+            <div class="field">
+              <label for="movementCategory">Categoria</label>
+              <input id="movementCategory">
+            </div>
+            <div class="field">
+              <label for="movementSubcategory">Subcategoria</label>
+              <input id="movementSubcategory">
+            </div>
+            <div class="field">
+              <label for="movementConcept">Concepto</label>
+              <input id="movementConcept">
+            </div>
+            <div class="field">
+              <label for="movementPayment">Metodo</label>
+              <input id="movementPayment">
+            </div>
+            <div class="field wide">
+              <div class="inline-label">
+                <label for="movementAccount">Banco / cuenta</label>
+                <button type="button" class="link-button" id="openBanksPanel">Gestionar bancos</button>
+              </div>
+              <input type="hidden" id="movementAccount">
+              <div class="bank-rail" id="bankRail" aria-label="Seleccionar banco"></div>
+            </div>
+            <div class="field wide">
+              <label for="movementNote">Nota</label>
+              <input id="movementNote">
+            </div>
+            <div class="actions wide">
+              <button type="submit">Guardar</button>
+              <button type="button" class="secondary" id="cancelEdit">Cancelar</button>
+            </div>
+          </form>
+          <p class="form-message" id="movementMessage"></p>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading">
+            <h2>Importar CSV/Excel</h2>
+            <span class="muted" id="importStatus">Sin archivo</span>
+          </div>
+          <div class="import-box">
+            <input type="file" id="importFile" accept=".csv,.xlsx,.xls">
+            <button type="button" id="previewImport">Previsualizar</button>
+            <button type="button" class="secondary" id="commitImport">Importar filas validas</button>
+          </div>
+          <div class="import-preview" id="importPreview"></div>
+        </article>
       </section>
 
       <section class="content-grid">
@@ -124,6 +231,7 @@
                 <th>Concepto</th>
                 <th>Cuenta</th>
                 <th class="amount-cell">Cantidad</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody id="movementsTable"></tbody>
@@ -132,5 +240,36 @@
         <p class="empty-table" id="tableEmpty">No hay movimientos con estos filtros</p>
       </section>
     </main>
+
+    <section class="modal-backdrop" id="banksModal" aria-hidden="true">
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="banksTitle">
+        <div class="panel-heading">
+          <h2 id="banksTitle">Bancos</h2>
+          <button type="button" class="theme-toggle" id="closeBanksPanel" aria-label="Cerrar">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M18 6 6 18"></path>
+              <path d="m6 6 12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <form class="movement-form" id="bankForm">
+          <input type="hidden" id="bankId">
+          <div class="field">
+            <label for="bankName">Nombre del banco</label>
+            <input id="bankName" required>
+          </div>
+          <div class="field wide">
+            <label for="bankLogo">Logo URL</label>
+            <input id="bankLogo" placeholder="https://...">
+          </div>
+          <div class="actions wide">
+            <button type="submit">Guardar banco</button>
+            <button type="button" class="secondary" id="cancelBankEdit">Cancelar</button>
+          </div>
+        </form>
+        <p class="form-message" id="bankMessage"></p>
+        <div class="bank-list" id="bankList"></div>
+      </div>
+    </section>
   </body>
 </html>

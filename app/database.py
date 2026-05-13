@@ -46,3 +46,17 @@ def fetch_all(sql: str, params: tuple[Any, ...] | None = None) -> list[dict[str,
         with connection.cursor() as cursor:
             cursor.execute(sql, params or ())
             return list(cursor.fetchall())
+
+
+def execute(sql: str, params: tuple[Any, ...] | None = None) -> int:
+    with get_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(sql, params or ())
+            return cursor.rowcount
+
+
+def execute_returning_id(sql: str, params: tuple[Any, ...] | None = None) -> int:
+    with get_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(sql, params or ())
+            return int(cursor.lastrowid)

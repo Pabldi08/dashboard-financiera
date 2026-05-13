@@ -4,18 +4,41 @@ const state = {
   currency: "EUR",
   categoryRows: [],
   periodRows: [],
+  importRows: [],
+  banks: [],
 };
 
 const expenseTypes = new Set(["gasto", "gastos", "expense", "egreso", "egresos"]);
 const incomeTypes = new Set(["ingreso", "ingresos", "income"]);
+const fallbackBanks = [
+  { id: "fallback-ing", name: "ING", logo_url: "/static/vendor/banks/ing.svg" },
+  { id: "fallback-santander", name: "Santander", logo_url: "/static/vendor/banks/santander.svg" },
+  { id: "fallback-bbva", name: "BBVA", logo_url: "/static/vendor/banks/bbva.svg" },
+  { id: "fallback-caixabank", name: "CaixaBank", logo_url: "/static/vendor/banks/caixabank.svg" },
+  { id: "fallback-sabadell", name: "Banco Sabadell", logo_url: "/static/vendor/banks/sabadell.svg" },
+  { id: "fallback-bankinter", name: "Bankinter", logo_url: "/static/vendor/banks/bankinter.svg" },
+  { id: "fallback-openbank", name: "Openbank", logo_url: "/static/vendor/banks/openbank.svg" },
+  { id: "fallback-revolut", name: "Revolut", logo_url: "/static/vendor/banks/revolut.svg" },
+  { id: "fallback-n26", name: "N26", logo_url: "/static/vendor/banks/n26.svg" },
+  { id: "fallback-unicaja", name: "Unicaja", logo_url: "/static/vendor/banks/unicaja.svg" },
+];
 
 const elements = {
+  loginView: document.querySelector("#loginView"),
+  loginForm: document.querySelector("#loginForm"),
+  loginUser: document.querySelector("#loginUser"),
+  loginPassword: document.querySelector("#loginPassword"),
+  loginMessage: document.querySelector("#loginMessage"),
   connectionStatus: document.querySelector("#connectionStatus"),
+  logoutButton: document.querySelector("#logoutButton"),
   themeToggle: document.querySelector("#themeToggle"),
   totalExpenses: document.querySelector("#totalExpenses"),
   totalIncome: document.querySelector("#totalIncome"),
   monthBalance: document.querySelector("#monthBalance"),
   movementCount: document.querySelector("#movementCount"),
+  dailyAverage: document.querySelector("#dailyAverage"),
+  annualExpenses: document.querySelector("#annualExpenses"),
+  monthFilter: document.querySelector("#monthFilter"),
   startDate: document.querySelector("#startDate"),
   endDate: document.querySelector("#endDate"),
   categoryFilter: document.querySelector("#categoryFilter"),
@@ -23,12 +46,43 @@ const elements = {
   periodFilter: document.querySelector("#periodFilter"),
   applyFilters: document.querySelector("#applyFilters"),
   resetFilters: document.querySelector("#resetFilters"),
+  exportExcel: document.querySelector("#exportExcel"),
+  movementForm: document.querySelector("#movementForm"),
+  movementFormMode: document.querySelector("#movementFormMode"),
+  movementId: document.querySelector("#movementId"),
+  movementType: document.querySelector("#movementType"),
+  movementAmount: document.querySelector("#movementAmount"),
+  movementDate: document.querySelector("#movementDate"),
+  movementCategory: document.querySelector("#movementCategory"),
+  movementSubcategory: document.querySelector("#movementSubcategory"),
+  movementConcept: document.querySelector("#movementConcept"),
+  movementPayment: document.querySelector("#movementPayment"),
+  movementAccount: document.querySelector("#movementAccount"),
+  bankRail: document.querySelector("#bankRail"),
+  openBanksPanel: document.querySelector("#openBanksPanel"),
+  movementNote: document.querySelector("#movementNote"),
+  movementMessage: document.querySelector("#movementMessage"),
+  cancelEdit: document.querySelector("#cancelEdit"),
+  importFile: document.querySelector("#importFile"),
+  previewImport: document.querySelector("#previewImport"),
+  commitImport: document.querySelector("#commitImport"),
+  importStatus: document.querySelector("#importStatus"),
+  importPreview: document.querySelector("#importPreview"),
   categoryTotal: document.querySelector("#categoryTotal"),
   categoryEmpty: document.querySelector("#categoryEmpty"),
   periodEmpty: document.querySelector("#periodEmpty"),
   tableCount: document.querySelector("#tableCount"),
   movementsTable: document.querySelector("#movementsTable"),
   tableEmpty: document.querySelector("#tableEmpty"),
+  banksModal: document.querySelector("#banksModal"),
+  closeBanksPanel: document.querySelector("#closeBanksPanel"),
+  bankForm: document.querySelector("#bankForm"),
+  bankId: document.querySelector("#bankId"),
+  bankName: document.querySelector("#bankName"),
+  bankLogo: document.querySelector("#bankLogo"),
+  bankMessage: document.querySelector("#bankMessage"),
+  bankList: document.querySelector("#bankList"),
+  cancelBankEdit: document.querySelector("#cancelBankEdit"),
 };
 
 function getStoredTheme() {
@@ -106,6 +160,11 @@ async function fetchJson(path, params = null) {
   const query = params && params.toString() ? `?${params.toString()}` : "";
   const response = await fetch(`${path}${query}`);
 
+  if (response.status === 401) {
+    showLogin();
+    throw new Error("No autenticado");
+  }
+
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     throw new Error(body.detail || `Error HTTP ${response.status}`);
@@ -115,12 +174,26 @@ async function fetchJson(path, params = null) {
 }
 
 async function loadSummary() {
-  const summary = await fetchJson("/api/summary/month");
+  const monthParams = selectedMonthParams();
+  const insights = await fetchJson("/api/insights/month", monthParams);
+  const summary = insights.current;
   state.currency = summary.currency || "EUR";
   elements.totalExpenses.textContent = formatCurrency(summary.total_expenses);
   elements.totalIncome.textContent = formatCurrency(summary.total_income);
   elements.monthBalance.textContent = formatCurrency(summary.balance);
   elements.movementCount.textContent = summary.movement_count ?? 0;
+  elements.dailyAverage.textContent = formatCurrency(insights.average_daily_expense);
+  elements.annualExpenses.textContent = formatCurrency(insights.annual.annual_expenses);
+}
+
+function selectedMonthParams() {
+  const params = new URLSearchParams();
+  if (elements.monthFilter.value) {
+    const [year, month] = elements.monthFilter.value.split("-");
+    params.set("year", year);
+    params.set("month", String(Number(month)));
+  }
+  return params;
 }
 
 async function loadOptions() {
@@ -128,6 +201,12 @@ async function loadOptions() {
     fetchJson("/api/categories"),
     fetchJson("/api/types"),
   ]);
+  let banks = fallbackBanks;
+  try {
+    banks = await fetchJson("/api/banks");
+  } catch (error) {
+    console.warn("Usando bancos locales de reserva", error);
+  }
 
   elements.categoryFilter.replaceChildren(new Option("Todas", ""));
   categories.forEach((item) => {
@@ -137,6 +216,106 @@ async function loadOptions() {
   elements.typeFilter.replaceChildren(new Option("Todos", ""));
   types.forEach((item) => {
     elements.typeFilter.append(new Option(item.type, item.type));
+  });
+
+  state.banks = banks;
+  renderBankRail();
+  renderBankList();
+}
+
+function bankInitials(name) {
+  return String(name || "?")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join("");
+}
+
+function bankLogoNode(bank) {
+  if (bank.logo_url) {
+    const image = document.createElement("img");
+    image.className = "bank-logo";
+    image.src = bank.logo_url;
+    image.alt = "";
+    image.onerror = () => {
+      image.replaceWith(bankFallbackNode(bank.name));
+    };
+    return image;
+  }
+  return bankFallbackNode(bank.name);
+}
+
+function bankFallbackNode(name) {
+  const fallback = document.createElement("span");
+  fallback.className = "bank-fallback";
+  fallback.textContent = bankInitials(name);
+  return fallback;
+}
+
+function renderBankRail() {
+  elements.bankRail.replaceChildren();
+  if (!state.banks.length) {
+    const empty = document.createElement("button");
+    empty.type = "button";
+    empty.className = "bank-card";
+    empty.textContent = "Añadir banco";
+    empty.addEventListener("click", openBanksModal);
+    elements.bankRail.append(empty);
+    return;
+  }
+
+  state.banks.forEach((bank) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `bank-card ${elements.movementAccount.value === bank.name ? "selected" : ""}`;
+    button.append(bankLogoNode(bank));
+
+    const name = document.createElement("span");
+    name.className = "bank-name";
+    name.textContent = bank.name;
+    button.append(name);
+
+    button.addEventListener("click", () => selectBank(bank.name));
+    elements.bankRail.append(button);
+  });
+}
+
+function selectBank(name) {
+  elements.movementAccount.value = name;
+  renderBankRail();
+}
+
+function renderBankList() {
+  elements.bankList.replaceChildren();
+  state.banks.forEach((bank) => {
+    const row = document.createElement("div");
+    row.className = "bank-row";
+    row.append(bankLogoNode(bank));
+
+    const name = document.createElement("strong");
+    name.textContent = bank.name;
+    row.append(name);
+
+    const actions = document.createElement("div");
+    actions.className = "actions";
+
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.className = "secondary";
+    edit.textContent = "Editar";
+    edit.addEventListener("click", () => fillBankForm(bank));
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "secondary";
+    remove.textContent = "Ocultar";
+    remove.disabled = String(bank.id).startsWith("fallback-");
+    remove.addEventListener("click", () => deleteBank(bank.id));
+
+    actions.append(edit, remove);
+    row.append(actions);
+    elements.bankList.append(row);
   });
 }
 
@@ -275,6 +454,7 @@ function renderMovements(rows) {
       concept,
       row.cuenta || row.metodo_pago || "-",
       formatCurrency(row.cantidad, row.moneda || state.currency),
+      "",
     ];
 
     cells.forEach((value, index) => {
@@ -285,6 +465,23 @@ function renderMovements(rows) {
         badge.className = `type-badge ${typeClass}`;
         badge.textContent = value;
         td.append(badge);
+      } else if (index === 6) {
+        const editButton = document.createElement("button");
+        editButton.type = "button";
+        editButton.className = "secondary";
+        editButton.textContent = "Editar";
+        editButton.addEventListener("click", () => fillMovementForm(row));
+
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "secondary";
+        deleteButton.textContent = "Borrar";
+        deleteButton.addEventListener("click", () => deleteMovement(row.id));
+
+        const actionWrap = document.createElement("div");
+        actionWrap.className = "actions";
+        actionWrap.append(editButton, deleteButton);
+        td.append(actionWrap);
       } else {
         td.textContent = value;
       }
@@ -324,15 +521,18 @@ async function loadDashboardData() {
   renderCategoryChart(categoryRows);
   renderPeriodChart(periodRows);
   renderMovements(movementRows);
+  await loadSummary();
   setConnectionStatus("ok", "Conectado");
 }
 
 async function initializeDashboard() {
   const range = getCurrentMonthRange();
+  elements.monthFilter.value = range.start.slice(0, 7);
   elements.startDate.value = range.start;
   elements.endDate.value = range.end;
 
   try {
+    await ensureAuthenticated();
     await fetchJson("/api/db-health");
     await Promise.all([loadSummary(), loadOptions()]);
     await loadDashboardData();
@@ -342,7 +542,158 @@ async function initializeDashboard() {
   }
 }
 
+async function ensureAuthenticated() {
+  try {
+    await fetchJson("/api/auth/me");
+    hideLogin();
+  } catch (error) {
+    showLogin();
+    throw error;
+  }
+}
+
+function showLogin() {
+  document.body.classList.remove("auth-ready", "auth-loading");
+  document.body.classList.add("auth-login");
+  elements.loginView.classList.add("visible");
+}
+
+function hideLogin() {
+  document.body.classList.remove("auth-login", "auth-loading");
+  document.body.classList.add("auth-ready");
+  elements.loginView.classList.remove("visible");
+}
+
+function setMessage(element, text, type = "") {
+  element.textContent = text;
+  element.className = `form-message ${type}`;
+}
+
+function currentDateTimeInputValue() {
+  const now = new Date();
+  const offsetMs = now.getTimezoneOffset() * 60 * 1000;
+  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 16);
+}
+
+function movementPayloadFromForm() {
+  const createdAt = elements.movementDate.value ? `${elements.movementDate.value}:00` : null;
+  return {
+    tipo: elements.movementType.value,
+    cantidad: elements.movementAmount.value,
+    moneda: "EUR",
+    categoria: elements.movementCategory.value || null,
+    subcategoria: elements.movementSubcategory.value || null,
+    concepto: elements.movementConcept.value || null,
+    metodo_pago: elements.movementPayment.value || null,
+    cuenta: elements.movementAccount.value || null,
+    nota: elements.movementNote.value || null,
+    created_at: createdAt,
+  };
+}
+
+function fillMovementForm(row) {
+  elements.movementId.value = row.id;
+  elements.movementType.value = row.tipo || "gasto";
+  elements.movementAmount.value = row.cantidad || "";
+  elements.movementDate.value = row.created_at ? String(row.created_at).replace(" ", "T").slice(0, 16) : "";
+  elements.movementCategory.value = row.categoria || "";
+  elements.movementSubcategory.value = row.subcategoria || "";
+  elements.movementConcept.value = row.concepto || "";
+  elements.movementPayment.value = row.metodo_pago || "";
+  elements.movementAccount.value = row.cuenta || "";
+  renderBankRail();
+  elements.movementNote.value = row.nota || "";
+  elements.movementFormMode.textContent = `Editando #${row.id}`;
+}
+
+function resetMovementForm() {
+  elements.movementForm.reset();
+  elements.movementId.value = "";
+  elements.movementDate.value = currentDateTimeInputValue();
+  elements.movementAccount.value = "";
+  renderBankRail();
+  elements.movementFormMode.textContent = "Alta manual";
+}
+
+function openBanksModal() {
+  elements.banksModal.classList.add("visible");
+  elements.banksModal.setAttribute("aria-hidden", "false");
+}
+
+function closeBanksModal() {
+  elements.banksModal.classList.remove("visible");
+  elements.banksModal.setAttribute("aria-hidden", "true");
+}
+
+function fillBankForm(bank) {
+  elements.bankId.value = bank.id;
+  elements.bankName.value = bank.name;
+  elements.bankLogo.value = bank.logo_url || "";
+}
+
+function resetBankForm() {
+  elements.bankForm.reset();
+  elements.bankId.value = "";
+}
+
+function bankPayloadFromForm() {
+  return {
+    name: elements.bankName.value,
+    logo_url: elements.bankLogo.value || null,
+    is_active: true,
+  };
+}
+
+async function saveBank(event) {
+  event.preventDefault();
+  const id = elements.bankId.value;
+  const response = await fetch(id ? `/api/banks/${id}` : "/api/banks", {
+    method: id ? "PUT" : "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(bankPayloadFromForm()),
+  });
+
+  if (!response.ok) {
+    setMessage(elements.bankMessage, "No se pudo guardar el banco", "error");
+    return;
+  }
+
+  resetBankForm();
+  setMessage(elements.bankMessage, "Banco guardado", "ok");
+  await loadOptions();
+}
+
+async function deleteBank(id) {
+  if (!confirm("¿Ocultar este banco del selector?")) return;
+  const response = await fetch(`/api/banks/${id}`, { method: "DELETE" });
+  if (!response.ok) {
+    setMessage(elements.bankMessage, "No se pudo ocultar el banco", "error");
+    return;
+  }
+  await loadOptions();
+}
+
+async function deleteMovement(id) {
+  if (!confirm("¿Borrar este movimiento?")) return;
+  const response = await fetch(`/api/movements/${id}`, { method: "DELETE" });
+  if (!response.ok) throw new Error("No se pudo borrar");
+  await loadDashboardData();
+}
+
 elements.applyFilters.addEventListener("click", () => {
+  loadDashboardData().catch((error) => {
+    console.error(error);
+    setConnectionStatus("error", "Error");
+  });
+});
+
+elements.monthFilter.addEventListener("change", () => {
+  if (!elements.monthFilter.value) return;
+  const [year, month] = elements.monthFilter.value.split("-").map(Number);
+  const start = new Date(year, month - 1, 1);
+  const end = new Date(year, month, 0);
+  elements.startDate.value = toDateInputValue(start);
+  elements.endDate.value = toDateInputValue(end);
   loadDashboardData().catch((error) => {
     console.error(error);
     setConnectionStatus("error", "Error");
@@ -351,6 +702,7 @@ elements.applyFilters.addEventListener("click", () => {
 
 elements.resetFilters.addEventListener("click", () => {
   const range = getCurrentMonthRange();
+  elements.monthFilter.value = range.start.slice(0, 7);
   elements.startDate.value = range.start;
   elements.endDate.value = range.end;
   elements.categoryFilter.value = "";
@@ -369,10 +721,110 @@ elements.periodFilter.addEventListener("change", () => {
   });
 });
 
+elements.exportExcel.addEventListener("click", () => {
+  const params = buildParams();
+  params.set("limit", "10000");
+  const query = params.toString() ? `?${params.toString()}` : "";
+  window.location.href = `/api/export/movements.xlsx${query}`;
+});
+
+elements.loginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setMessage(elements.loginMessage, "Entrando...");
+  const response = await fetch("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      username: elements.loginUser.value,
+      password: elements.loginPassword.value,
+    }),
+  });
+
+  if (!response.ok) {
+    setMessage(elements.loginMessage, "Usuario o contraseña incorrectos", "error");
+    return;
+  }
+
+  hideLogin();
+  setMessage(elements.loginMessage, "");
+  await initializeDashboard();
+});
+
+elements.logoutButton.addEventListener("click", async () => {
+  await fetch("/api/auth/logout", { method: "POST" });
+  showLogin();
+});
+
+elements.movementForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const id = elements.movementId.value;
+  const response = await fetch(id ? `/api/movements/${id}` : "/api/movements", {
+    method: id ? "PUT" : "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(movementPayloadFromForm()),
+  });
+
+  if (!response.ok) {
+    setMessage(elements.movementMessage, "No se pudo guardar el movimiento", "error");
+    return;
+  }
+
+  resetMovementForm();
+  setMessage(elements.movementMessage, "Movimiento guardado", "ok");
+  await Promise.all([loadOptions(), loadDashboardData()]);
+});
+
+elements.cancelEdit.addEventListener("click", resetMovementForm);
+
+elements.openBanksPanel.addEventListener("click", openBanksModal);
+elements.closeBanksPanel.addEventListener("click", closeBanksModal);
+elements.cancelBankEdit.addEventListener("click", resetBankForm);
+elements.bankForm.addEventListener("submit", saveBank);
+elements.banksModal.addEventListener("click", (event) => {
+  if (event.target === elements.banksModal) closeBanksModal();
+});
+
+elements.previewImport.addEventListener("click", async () => {
+  const file = elements.importFile.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await fetch("/api/imports/preview", { method: "POST", body: formData });
+  if (!response.ok) {
+    elements.importStatus.textContent = "Error al previsualizar";
+    return;
+  }
+
+  const preview = await response.json();
+  state.importRows = preview.preview_rows;
+  elements.importStatus.textContent = `${preview.preview_rows.length} filas validas de ${preview.total_rows}`;
+  elements.importPreview.textContent = preview.errors.length
+    ? `Errores: ${preview.errors.map((error) => `fila ${error.row}: ${error.error}`).join("; ")}`
+    : "Sin errores en la previsualizacion";
+});
+
+elements.commitImport.addEventListener("click", async () => {
+  if (!state.importRows.length) return;
+  const response = await fetch("/api/imports/commit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      filename: elements.importFile.files[0]?.name || "importacion",
+      rows: state.importRows,
+    }),
+  });
+  const result = await response.json();
+  elements.importStatus.textContent = `${result.imported_rows} filas importadas`;
+  state.importRows = [];
+  await Promise.all([loadOptions(), loadDashboardData()]);
+});
+
 elements.themeToggle.addEventListener("click", () => {
   const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
   applyTheme(nextTheme);
 });
 
 applyTheme(getStoredTheme());
+resetMovementForm();
 initializeDashboard();

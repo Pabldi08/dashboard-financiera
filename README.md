@@ -1,256 +1,233 @@
 # dashboard financiera
 
-Aplicacion web local para consultar movimientos financieros desde MariaDB.
+Aplicacion self-hosted para controlar finanzas personales desde navegador. Incluye dashboard, alta manual de movimientos, importacion CSV/Excel, exportacion a Excel, integracion n8n y bot de Telegram opcional.
 
-## Fase 2: entorno de desarrollo
+## Instalacion rapida con Docker
 
-1. Crear y activar el entorno virtual:
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
-
-2. Instalar dependencias:
-
-```powershell
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-3. Crear la configuracion local:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Edita `.env` con los datos reales de tu MariaDB cuando pasemos a la Fase 3.
-
-4. Arrancar la app de desarrollo:
-
-```powershell
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
-```
-
-5. Probar en el navegador:
-
-- http://127.0.0.1:8000/api/health
-- http://127.0.0.1:8000/docs
-
-## Fase 3: conexion a MariaDB
-
-La configuracion real vive en `.env`. Ese archivo no se sube a Git.
-
-Edita estos valores:
-
-```env
-DB_HOST=IP_DE_TU_RASPBERRY
-DB_PORT=3306
-DB_NAME=finanzas
-DB_USER=gastos_readonly
-DB_PASSWORD=tu_password_real
-```
-
-Para probar la conexion desde la app:
-
-```powershell
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
-```
-
-Luego abre:
-
-- http://127.0.0.1:8000/api/db-health
-
-El usuario recomendado para esta primera version debe tener solo permisos `SELECT`.
-
-## Fase 4: endpoints del backend
-
-Endpoints disponibles:
-
-- `GET /api/summary/month`
-- `GET /api/movements/recent`
-- `GET /api/movements`
-- `GET /api/expenses/by-category`
-- `GET /api/expenses/by-period`
-- `GET /api/categories`
-- `GET /api/types`
-
-Ejemplos:
-
-```text
-http://127.0.0.1:8000/api/summary/month
-http://127.0.0.1:8000/api/summary/month?year=2026&month=5
-http://127.0.0.1:8000/api/movements/recent?limit=10
-http://127.0.0.1:8000/api/movements?start_date=2026-05-01&end_date=2026-05-31
-http://127.0.0.1:8000/api/movements?type=gasto&category=comida
-http://127.0.0.1:8000/api/expenses/by-category?start_date=2026-05-01
-http://127.0.0.1:8000/api/expenses/by-period?period=day
-http://127.0.0.1:8000/api/expenses/by-period?period=month
-```
-
-Los filtros usan estos parametros:
-
-- `start_date`: fecha inicial, formato `YYYY-MM-DD`.
-- `end_date`: fecha final, formato `YYYY-MM-DD`.
-- `category`: categoria exacta.
-- `type`: tipo exacto, por ejemplo `gasto` o `ingreso`.
-- `limit`: numero maximo de movimientos.
-- `offset`: salto para paginacion.
-
-## Fase 5: frontend
-
-La interfaz visual esta en:
-
-```text
-http://127.0.0.1:8000/
-```
-
-Incluye:
-
-- tarjetas de resumen mensual,
-- filtros por fecha, categoria y tipo,
-- grafico de gastos por categoria,
-- grafico de gastos por dia o por mes,
-- tabla de movimientos.
-
-Chart.js se sirve desde `app/static/vendor/chart.umd.min.js`, asi que la pagina no depende del CDN para pintar graficos.
-
-El dashboard arranca en modo oscuro por defecto. El boton de la cabecera permite cambiar entre modo oscuro y claro, y la preferencia queda guardada en el navegador.
-
-## Fase 6: probar desde el PC
-
-Arranca la aplicacion:
-
-```powershell
-cd "C:\Users\diazr\Documents\New project\dashboard-financiera"
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```bash
+git clone URL_DEL_REPOSITORIO dashboard-financiera
+cd dashboard-financiera
+cp .env.example .env
+nano .env
+docker compose up -d --build
 ```
 
 Abre:
 
 ```text
-http://127.0.0.1:8000/
+http://IP_DEL_SERVIDOR:8000/
 ```
 
-Comprobaciones recomendadas:
-
-1. La cabecera debe mostrar `Conectado`.
-2. Las tarjetas deben mostrar el gasto del mes, ingresos, balance y numero de movimientos.
-3. El grafico de categorias debe mostrar los gastos agrupados por `categoria`.
-4. El grafico temporal debe cambiar entre `Por dia` y `Por mes`.
-5. La tabla debe mostrar los movimientos filtrados.
-6. Cambia fechas, categoria o tipo y pulsa `Aplicar`.
-7. Pulsa `Limpiar` para volver al mes actual.
-8. Cambia entre modo oscuro y claro desde la cabecera.
-
-Tambien puedes revisar la API en:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-## Fase 7: desplegar en Raspberry Pi con systemd
-
-La Raspberry ejecutara la app como servicio. La primera version queda accesible solo desde red local o Tailscale si no abres puertos en el router.
-
-### 1. Copiar el proyecto a la Raspberry
-
-Desde PowerShell en tu PC:
-
-```powershell
-cd "C:\Users\diazr\Documents\New project\dashboard-financiera"
-ssh pi@IP_DE_TU_RASPBERRY "mkdir -p /home/pi/dashboard-financiera"
-scp -r app systemd requirements.txt .env.example pi@IP_DE_TU_RASPBERRY:/home/pi/dashboard-financiera
-```
-
-Si usas Tailscale, puedes poner la IP Tailscale de la Raspberry.
-
-### 2. Preparar Python en la Raspberry
-
-Entra por SSH:
-
-```bash
-ssh pi@IP_DE_TU_RASPBERRY
-cd /home/pi/dashboard-financiera
-python3 -m venv .venv
-.venv/bin/python -m pip install --upgrade pip
-.venv/bin/pip install -r requirements.txt
-```
-
-### 3. Crear el archivo `.env` de produccion
-
-```bash
-cp .env.example .env
-nano .env
-```
-
-Como MariaDB esta en la misma Raspberry, puedes usar:
+Credenciales iniciales: las que pongas en `.env`:
 
 ```env
-DB_HOST=127.0.0.1
+APP_ADMIN_USER=admin
+APP_ADMIN_PASSWORD=cambia_esta_password
+```
+
+Docker Compose arranca:
+
+- `dashboard-financiera`: app FastAPI + frontend.
+- `dashboard-financiera-db`: MariaDB con volumen persistente.
+- `dashboard-financiera-telegram`: worker opcional para Telegram.
+
+Los datos de MariaDB viven en el volumen Docker `mariadb-data`.
+
+## Configuracion
+
+Variables principales de `.env`:
+
+```env
+APP_PORT=8000
+APP_ADMIN_USER=admin
+APP_ADMIN_PASSWORD=cambia_esta_password
+APP_SECRET_KEY=cambia_esta_clave_larga
+INTEGRATION_API_KEY=cambia_esta_api_key
+TELEGRAM_BOT_TOKEN=
+
+DB_HOST=db
 DB_PORT=3306
 DB_NAME=finanzas
-DB_USER=gastos_readonly
-DB_PASSWORD=tu_password_real
+DB_USER=dashboard
+DB_PASSWORD=cambia_esta_password_db
+MARIADB_ROOT_PASSWORD=cambia_esta_password_root
 ```
 
-### 4. Probar manualmente antes de systemd
+Para usar una MariaDB externa, cambia `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` y `DB_PASSWORD`. Ese usuario necesita permisos de lectura, escritura y migracion sobre la base de datos.
 
-```bash
-.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+Permisos recomendados para una MariaDB externa:
+
+```sql
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER ON finanzas.* TO 'dashboard_app'@'%';
+FLUSH PRIVILEGES;
 ```
 
-Desde tu PC abre:
+La app necesita `CREATE` y `ALTER` para crear o actualizar tablas como `banks`, `import_jobs` y `telegram_messages`.
+
+## Funciones
+
+- Login simple para una cuenta por instalacion.
+- Dashboard mensual con gasto, ingresos, balance, media diaria y gasto anual.
+- Graficos por categoria y periodo.
+- Filtros por fecha, categoria y tipo.
+- Alta, edicion y borrado de movimientos desde la web.
+- Gestion de bancos/cuentas con nombre y logo.
+- Selector horizontal deslizable de banco al crear o editar movimientos.
+- Importacion CSV/Excel con previsualizacion.
+- Exportacion a Excel de los movimientos filtrados.
+- Endpoint n8n protegido con API key.
+- Worker Telegram por polling, sin exponer la app publicamente.
+- Modo oscuro/claro.
+
+## API principal
+
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
+- `GET /api/summary/month`
+- `GET /api/insights/month`
+- `GET /api/movements`
+- `POST /api/movements`
+- `PUT /api/movements/{id}`
+- `DELETE /api/movements/{id}`
+- `GET /api/banks`
+- `POST /api/banks`
+- `PUT /api/banks/{id}`
+- `DELETE /api/banks/{id}`
+- `POST /api/imports/preview`
+- `POST /api/imports/commit`
+- `GET /api/export/movements.xlsx`
+- `POST /api/integrations/n8n/movements`
+
+La documentacion interactiva esta en:
 
 ```text
-http://IP_DE_TU_RASPBERRY:8000/
+http://IP_DEL_SERVIDOR:8000/docs
 ```
 
-Si usas Tailscale:
+## Formato de movimiento
+
+Ejemplo JSON:
+
+```json
+{
+  "tipo": "gasto",
+  "cantidad": 12.5,
+  "moneda": "EUR",
+  "categoria": "comida",
+  "subcategoria": "restaurante",
+  "concepto": "Menu diario",
+  "metodo_pago": "tarjeta",
+  "cuenta": "principal",
+  "nota": "",
+  "created_at": "2026-05-13T14:30:00"
+}
+```
+
+El campo `cuenta` guarda el banco seleccionado. La pantalla de bancos permite registrar nombre y `logo_url`, y el selector de movimientos muestra esos bancos en una banda horizontal deslizable.
+
+## Bancos
+
+Ejemplo JSON:
+
+```json
+{
+  "name": "BBVA",
+  "logo_url": "https://...",
+  "is_active": true
+}
+```
+
+Al borrar un banco desde la app se oculta del selector, pero no se modifican los movimientos antiguos que ya lo usaban.
+
+## Integracion con n8n
+
+Endpoint:
 
 ```text
-http://IP_TAILSCALE_DE_TU_RASPBERRY:8000/
+POST /api/integrations/n8n/movements
 ```
 
-Para parar la prueba manual pulsa `Ctrl+C`.
+Cabecera obligatoria:
 
-### 5. Instalar el servicio systemd
+```text
+X-API-Key: valor_de_INTEGRATION_API_KEY
+```
 
-Revisa primero el archivo:
+Body: el mismo formato JSON de movimiento.
+
+## Telegram
+
+1. Crea un bot con BotFather.
+2. Copia el token en `.env`:
+
+```env
+TELEGRAM_BOT_TOKEN=123456:token
+```
+
+3. Arranca el worker:
 
 ```bash
-nano systemd/dashboard-financiera.service
+docker compose --profile telegram up -d --build
 ```
 
-Si tu usuario no es `pi`, cambia:
+Comandos soportados:
 
-```ini
-User=pi
-Group=pi
-WorkingDirectory=/home/pi/dashboard-financiera
-EnvironmentFile=/home/pi/dashboard-financiera/.env
-ExecStart=/home/pi/dashboard-financiera/.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+- `/gasto 12.50 comida Menu diario`
+- `/ingreso 1000 nomina Mayo`
+- `/ultimo`
+- `/resumen`
+- `/ayuda`
+
+El worker usa polling, asi que no necesitas abrir la app a Internet.
+
+## Importacion CSV/Excel
+
+Desde el dashboard puedes subir `.csv`, `.xlsx` o `.xls`.
+
+Columnas reconocidas:
+
+- `fecha` o `created_at`
+- `tipo`
+- `cantidad` o `importe`
+- `moneda`
+- `categoria`
+- `subcategoria`
+- `concepto` o `descripcion`
+- `metodo_pago` o `metodo de pago`
+- `cuenta`
+- `nota`
+
+La app previsualiza filas validas antes de importarlas.
+
+## Desarrollo local sin Docker
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+Copy-Item .env.example .env
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Despues instala y arranca:
+## Actualizar una instalacion systemd existente
+
+Si usas la instalacion manual de Raspberry:
 
 ```bash
-sudo cp systemd/dashboard-financiera.service /etc/systemd/system/dashboard-financiera.service
-sudo systemctl daemon-reload
-sudo systemctl enable dashboard-financiera
-sudo systemctl start dashboard-financiera
+cd /home/pablo/dashboard-financiera
+.venv/bin/pip install -r requirements.txt
+sudo systemctl restart dashboard-financiera
 sudo systemctl status dashboard-financiera
 ```
 
-### 6. Ver logs
+Recuerda copiar los archivos nuevos antes de reiniciar.
 
-```bash
-journalctl -u dashboard-financiera -f
-```
+## Seguridad
 
-### 7. Seguridad inicial
-
-- No abras el puerto `8000` en el router.
-- Usa red local o Tailscale.
-- Mantén el usuario MariaDB con solo permisos `SELECT`.
 - No subas `.env` a Git.
+- Cambia `APP_ADMIN_PASSWORD`, `APP_SECRET_KEY`, `INTEGRATION_API_KEY` y passwords de MariaDB.
+- No abras el puerto `8000` al publico sin HTTPS y una configuracion de seguridad revisada.
+- Para uso domestico, red local o Tailscale es lo recomendado.
+
+El icono de Microsoft Excel usado en el boton de exportacion se guarda localmente en `app/static/vendor/microsoft-excel.svg` y procede de SVGL.

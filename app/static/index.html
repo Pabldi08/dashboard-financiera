@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>dashboard financiera</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <script src="/static/vendor/chart.umd.min.js" defer></script>
+    <script src="/static/js/dashboard.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Finanzas personales</p>
+        <h1>Dashboard financiera</h1>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="theme-toggle" id="themeToggle" aria-label="Cambiar tema" aria-pressed="true">
+          <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2"></path>
+            <path d="M12 20v2"></path>
+            <path d="m4.93 4.93 1.41 1.41"></path>
+            <path d="m17.66 17.66 1.41 1.41"></path>
+            <path d="M2 12h2"></path>
+            <path d="M20 12h2"></path>
+            <path d="m6.34 17.66-1.41 1.41"></path>
+            <path d="m19.07 4.93-1.41 1.41"></path>
+          </svg>
+          <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20.6 14.4A8.7 8.7 0 0 1 9.6 3.4a8.7 8.7 0 1 0 11 11Z"></path>
+          </svg>
+        </button>
+        <div class="status-pill" id="connectionStatus">Conectando</div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="summary-grid" aria-label="Resumen mensual">
+        <article class="metric metric-expense">
+          <span class="metric-label">Gasto del mes</span>
+          <strong id="totalExpenses">--</strong>
+        </article>
+        <article class="metric metric-income">
+          <span class="metric-label">Ingresos del mes</span>
+          <strong id="totalIncome">--</strong>
+        </article>
+        <article class="metric metric-balance">
+          <span class="metric-label">Balance del mes</span>
+          <strong id="monthBalance">--</strong>
+        </article>
+        <article class="metric">
+          <span class="metric-label">Movimientos del mes</span>
+          <strong id="movementCount">--</strong>
+        </article>
+      </section>
+
+      <section class="toolbar" aria-label="Filtros">
+        <div class="field">
+          <label for="startDate">Desde</label>
+          <input type="date" id="startDate">
+        </div>
+        <div class="field">
+          <label for="endDate">Hasta</label>
+          <input type="date" id="endDate">
+        </div>
+        <div class="field">
+          <label for="categoryFilter">Categoria</label>
+          <select id="categoryFilter">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="typeFilter">Tipo</label>
+          <select id="typeFilter">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="actions">
+          <button type="button" id="applyFilters">Aplicar</button>
+          <button type="button" class="secondary" id="resetFilters">Limpiar</button>
+        </div>
+      </section>
+
+      <section class="content-grid">
+        <article class="panel chart-panel">
+          <div class="panel-heading">
+            <h2>Gastos por categoria</h2>
+            <span id="categoryTotal" class="muted"></span>
+          </div>
+          <div class="chart-box">
+            <canvas id="categoryChart"></canvas>
+            <p class="empty-state" id="categoryEmpty">Sin gastos para mostrar</p>
+          </div>
+        </article>
+
+        <article class="panel chart-panel">
+          <div class="panel-heading">
+            <h2>Gastos en el tiempo</h2>
+            <select id="periodFilter" aria-label="Periodo del grafico">
+              <option value="day">Por dia</option>
+              <option value="month">Por mes</option>
+            </select>
+          </div>
+          <div class="chart-box">
+            <canvas id="periodChart"></canvas>
+            <p class="empty-state" id="periodEmpty">Sin gastos para mostrar</p>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="panel-heading">
+          <h2>Movimientos</h2>
+          <span class="muted" id="tableCount"></span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Categoria</th>
+                <th>Concepto</th>
+                <th>Cuenta</th>
+                <th class="amount-cell">Cantidad</th>
+              </tr>
+            </thead>
+            <tbody id="movementsTable"></tbody>
+          </table>
+        </div>
+        <p class="empty-table" id="tableEmpty">No hay movimientos con estos filtros</p>
+      </section>
+    </main>
+  </body>
+</html>

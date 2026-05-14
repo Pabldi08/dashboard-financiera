@@ -4,9 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>dashboard financiera</title>
-    <link rel="stylesheet" href="/static/css/styles.css?v=20260514-n8n-bank-filter">
+    <link rel="stylesheet" href="/static/css/styles.css?v=20260514-connections-menu">
     <script src="/static/vendor/chart.umd.min.js" defer></script>
-    <script src="/static/js/dashboard.js?v=20260514-n8n-bank-filter" defer></script>
+    <script src="/static/js/dashboard.js?v=20260514-connections-menu" defer></script>
   </head>
   <body class="auth-login">
     <section class="login-view" id="loginView">
@@ -32,6 +32,13 @@
         <h1>Dashboard financiera</h1>
       </div>
       <div class="header-actions">
+        <button type="button" class="theme-toggle" id="openConnectionsMenu" aria-label="Abrir conexiones">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h16"></path>
+            <path d="M4 12h16"></path>
+            <path d="M4 17h16"></path>
+          </svg>
+        </button>
         <button type="button" class="secondary" id="logoutButton">Salir</button>
         <button type="button" class="theme-toggle" id="themeToggle" aria-label="Cambiar tema" aria-pressed="true">
           <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true">
@@ -135,29 +142,9 @@
           </div>
           <span class="status-pill" id="n8nStatus">Revisando</span>
         </div>
-        <div class="integration-grid">
-          <div class="field wide">
-            <label for="n8nEndpoint">Endpoint</label>
-            <div class="copy-row">
-              <input id="n8nEndpoint" readonly>
-              <button type="button" class="secondary" id="copyN8nEndpoint">Copiar</button>
-            </div>
-          </div>
-          <div class="field">
-            <label>Cabecera</label>
-            <code class="inline-code" id="n8nHeader">X-API-Key</code>
-          </div>
-          <div class="field">
-            <label>Clave API</label>
-            <code class="inline-code" id="n8nKeyState">No visible</code>
-          </div>
-          <div class="field wide">
-            <label for="n8nExample">Ejemplo JSON</label>
-            <div class="copy-row copy-row-stack">
-              <textarea id="n8nExample" readonly rows="8"></textarea>
-              <button type="button" class="secondary" id="copyN8nExample">Copiar ejemplo</button>
-            </div>
-          </div>
+        <div class="connection-notice">
+          <p>Configura `INTEGRATION_API_KEY` en `.env` para activar la conexion con n8n.</p>
+          <button type="button" class="secondary" id="openConnectionsFromNotice">Ver conexiones</button>
         </div>
       </section>
 
@@ -276,6 +263,47 @@
         <p class="empty-table" id="tableEmpty">No hay movimientos con estos filtros</p>
       </section>
     </main>
+
+    <section class="modal-backdrop" id="connectionsModal" aria-hidden="true">
+      <div class="modal-panel connections-panel" role="dialog" aria-modal="true" aria-labelledby="connectionsTitle">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Automatizaciones</p>
+            <h2 id="connectionsTitle">Conexiones</h2>
+          </div>
+          <button type="button" class="theme-toggle" id="closeConnectionsMenu" aria-label="Cerrar">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M18 6 6 18"></path>
+              <path d="m6 6 12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="integration-grid">
+          <div class="field wide">
+            <label for="n8nEndpoint">Endpoint n8n</label>
+            <div class="copy-row">
+              <input id="n8nEndpoint" readonly>
+              <button type="button" class="secondary" id="copyN8nEndpoint">Copiar</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Cabecera</label>
+            <code class="inline-code" id="n8nHeader">X-API-Key</code>
+          </div>
+          <div class="field">
+            <label>Clave API</label>
+            <code class="inline-code" id="n8nKeyState">No visible</code>
+          </div>
+          <div class="field wide">
+            <label for="n8nExample">Ejemplo JSON</label>
+            <div class="copy-row copy-row-stack">
+              <textarea id="n8nExample" readonly rows="8"></textarea>
+              <button type="button" class="secondary" id="copyN8nExample">Copiar ejemplo</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <section class="modal-backdrop" id="banksModal" aria-hidden="true">
       <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="banksTitle">

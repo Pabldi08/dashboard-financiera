@@ -29,6 +29,10 @@ const elements = {
   loginPassword: document.querySelector("#loginPassword"),
   loginMessage: document.querySelector("#loginMessage"),
   connectionStatus: document.querySelector("#connectionStatus"),
+  openConnectionsMenu: document.querySelector("#openConnectionsMenu"),
+  openConnectionsFromNotice: document.querySelector("#openConnectionsFromNotice"),
+  connectionsModal: document.querySelector("#connectionsModal"),
+  closeConnectionsMenu: document.querySelector("#closeConnectionsMenu"),
   logoutButton: document.querySelector("#logoutButton"),
   themeToggle: document.querySelector("#themeToggle"),
   totalExpenses: document.querySelector("#totalExpenses"),
@@ -730,6 +734,16 @@ function closeBanksModal() {
   elements.banksModal.setAttribute("aria-hidden", "true");
 }
 
+function openConnectionsModal() {
+  elements.connectionsModal.classList.add("visible");
+  elements.connectionsModal.setAttribute("aria-hidden", "false");
+}
+
+function closeConnectionsModal() {
+  elements.connectionsModal.classList.remove("visible");
+  elements.connectionsModal.setAttribute("aria-hidden", "true");
+}
+
 function fillBankForm(bank) {
   elements.bankId.value = bank.id;
   elements.bankName.value = bank.name;
@@ -896,6 +910,13 @@ elements.movementForm.addEventListener("submit", async (event) => {
 });
 
 elements.cancelEdit.addEventListener("click", closeMovementEditor);
+
+elements.openConnectionsMenu.addEventListener("click", openConnectionsModal);
+elements.openConnectionsFromNotice.addEventListener("click", openConnectionsModal);
+elements.closeConnectionsMenu.addEventListener("click", closeConnectionsModal);
+elements.connectionsModal.addEventListener("click", (event) => {
+  if (event.target === elements.connectionsModal) closeConnectionsModal();
+});
 
 elements.openBanksPanel.addEventListener("click", openBanksModal);
 elements.closeBanksPanel.addEventListener("click", closeBanksModal);

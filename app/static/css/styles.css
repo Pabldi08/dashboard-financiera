@@ -431,6 +431,23 @@ button.secondary {
   display: none;
 }
 
+.connection-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--muted);
+}
+
+.connection-notice p {
+  margin: 0;
+  font-weight: 700;
+}
+
+.connections-panel {
+  width: min(820px, 100%);
+}
+
 .integration-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(160px, 0.5fr);
@@ -781,6 +798,11 @@ td {
 
   .integration-grid {
     grid-template-columns: 1fr;
+  }
+
+  .connection-notice {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 

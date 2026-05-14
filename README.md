@@ -1,4 +1,4 @@
-# dashboard financiera
+# Dashboard Financiera
 
 Aplicacion self-hosted para controlar finanzas personales desde navegador.
 
@@ -12,27 +12,75 @@ Requisitos:
 - Docker Compose
 - Git
 
+### 1º Comprueba que los tienes instalados:
 ```bash
-git clone URL_DEL_REPOSITORIO dashboard-financiera
+git --version
+docker --version
+docker compose version
+```
+
+### 2º Clonar el repositorio:
+En linux:
+```bash
+git clone https://github.com/Pabldi08/dashboard-financiera.git dashboard-financiera
 cd dashboard-financiera
+chmod +x scripts/*.sh
 ./scripts/setup.sh
 docker compose up -d --build
 ```
 
 En Windows PowerShell:
-
 ```powershell
-git clone URL_DEL_REPOSITORIO dashboard-financiera
+git clone https://github.com/Pabldi08/dashboard-financiera.git dashboard-financiera
 cd dashboard-financiera
 .\scripts\setup.ps1
 docker compose up -d --build
 ```
 
-Abre la app en:
+### 3º Abre la app en:
+```text
+http://localhost:8000/
+```
+
+### 4º Configuración n8n + bot de telegram
+Cada usuario debe configurar su propio n8n contra su propia instalacion.
+
+Endpoint:
 
 ```text
-http://IP_DEL_EQUIPO:8000/
+POST http://IP_DEL_EQUIPO:8000/api/integrations/n8n/movements
 ```
+
+Cabecera:
+
+```text
+X-API-Key: valor_de_INTEGRATION_API_KEY
+```
+
+Body JSON:
+
+```json
+{
+  "tipo": "gasto",
+  "cantidad": 12.5,
+  "moneda": "EUR",
+  "categoria": "comida",
+  "subcategoria": "restaurante",
+  "concepto": "Menu diario",
+  "metodo_pago": "tarjeta",
+  "cuenta": "BBVA",
+  "nota": "Creado desde n8n",
+  "created_at": "2026-05-14T14:30:00"
+}
+```
+
+Hay una plantilla importable en:
+
+```text
+docs/n8n-movement-example.json
+```
+
+Dentro de la app, el panel **Integracion n8n** muestra la URL del endpoint, el nombre de la cabecera y un ejemplo JSON. La API key no se muestra completa en pantalla.
 
 El script de setup crea `.env` con:
 
@@ -101,44 +149,7 @@ FLUSH PRIVILEGES;
 
 ## Integracion con n8n
 
-Cada usuario debe configurar su propio n8n contra su propia instalacion.
 
-Endpoint:
-
-```text
-POST http://IP_DEL_EQUIPO:8000/api/integrations/n8n/movements
-```
-
-Cabecera:
-
-```text
-X-API-Key: valor_de_INTEGRATION_API_KEY
-```
-
-Body JSON:
-
-```json
-{
-  "tipo": "gasto",
-  "cantidad": 12.5,
-  "moneda": "EUR",
-  "categoria": "comida",
-  "subcategoria": "restaurante",
-  "concepto": "Menu diario",
-  "metodo_pago": "tarjeta",
-  "cuenta": "BBVA",
-  "nota": "Creado desde n8n",
-  "created_at": "2026-05-14T14:30:00"
-}
-```
-
-Hay una plantilla importable en:
-
-```text
-docs/n8n-movement-example.json
-```
-
-Dentro de la app, el panel **Integracion n8n** muestra la URL del endpoint, el nombre de la cabecera y un ejemplo JSON. La API key no se muestra completa en pantalla.
 
 ## Backups y restauracion
 

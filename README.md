@@ -220,25 +220,6 @@ Comandos soportados:
 
 El worker usa polling, asi que no necesitas exponer la app a Internet.
 
-## API principal
-
-- `POST /api/auth/login`
-- `POST /api/auth/logout`
-- `GET /api/auth/me`
-- `GET /api/summary/month`
-- `GET /api/insights/month`
-- `GET /api/movements`
-- `POST /api/movements`
-- `PUT /api/movements/{id}`
-- `DELETE /api/movements/{id}`
-- `GET /api/banks`
-- `POST /api/banks`
-- `PUT /api/banks/{id}`
-- `DELETE /api/banks/{id}`
-- `GET /api/integrations/status`
-- `POST /api/integrations/n8n/movements`
-- `GET /api/export/movements.xlsx`
-
 Documentacion interactiva:
 
 ```text

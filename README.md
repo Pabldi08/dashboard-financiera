@@ -82,6 +82,14 @@ docs/n8n-movement-example.json
 
 Dentro de la app, el panel **Integracion n8n** muestra la URL del endpoint, el nombre de la cabecera y un ejemplo JSON. La API key no se muestra completa en pantalla.
 
+### 5º Actualizar una instalacion existente con docker:
+```bash
+cd ~/dashboard-financiera
+git pull
+docker compose down
+docker compose up -d --build
+```
+
 El script de setup crea `.env` con:
 
 - usuario y password admin,
@@ -248,13 +256,6 @@ Copy-Item .env.example .env
 ```
 
 ## Actualizar una instalacion existente
-
-Con Docker:
-
-```bash
-git pull
-docker compose up -d --build
-```
 
 Con systemd manual en Raspberry:
 

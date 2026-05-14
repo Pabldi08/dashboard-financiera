@@ -1,0 +1,130 @@
+{
+  "name": "Dashboard financiera - movimiento ejemplo",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "tipo",
+              "name": "tipo",
+              "value": "gasto",
+              "type": "string"
+            },
+            {
+              "id": "cantidad",
+              "name": "cantidad",
+              "value": 12.5,
+              "type": "number"
+            },
+            {
+              "id": "moneda",
+              "name": "moneda",
+              "value": "EUR",
+              "type": "string"
+            },
+            {
+              "id": "categoria",
+              "name": "categoria",
+              "value": "comida",
+              "type": "string"
+            },
+            {
+              "id": "concepto",
+              "name": "concepto",
+              "value": "Menu diario",
+              "type": "string"
+            },
+            {
+              "id": "cuenta",
+              "name": "cuenta",
+              "value": "BBVA",
+              "type": "string"
+            },
+            {
+              "id": "nota",
+              "name": "nota",
+              "value": "Creado desde n8n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "movement-payload",
+      "name": "Movimiento ejemplo",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://IP_DE_TU_APP:8000/api/integrations/n8n/movements",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "PEGA_AQUI_TU_INTEGRATION_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "send-to-dashboard",
+      "name": "Enviar a Dashboard",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        540,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Movimiento ejemplo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Movimiento ejemplo": {
+      "main": [
+        [
+          {
+            "node": "Enviar a Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

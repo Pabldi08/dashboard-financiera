@@ -1,41 +1,66 @@
 # dashboard financiera
 
-Aplicacion self-hosted para controlar finanzas personales desde navegador. Incluye dashboard, alta manual de movimientos, importacion CSV/Excel, exportacion a Excel, integracion n8n y bot de Telegram opcional.
+Aplicacion self-hosted para controlar finanzas personales desde navegador.
+
+La idea principal es simple: **cada persona instala su propia copia**. No hay servidor central, no hay registro global y nadie tiene que entregar sus datos financieros a otra persona. Cada instalacion tiene su MariaDB, su `.env`, su API key de n8n y sus backups.
 
 ## Instalacion rapida con Docker
+
+Requisitos:
+
+- Docker
+- Docker Compose
+- Git
 
 ```bash
 git clone URL_DEL_REPOSITORIO dashboard-financiera
 cd dashboard-financiera
-cp .env.example .env
-nano .env
+./scripts/setup.sh
 docker compose up -d --build
 ```
 
-Abre:
+En Windows PowerShell:
+
+```powershell
+git clone URL_DEL_REPOSITORIO dashboard-financiera
+cd dashboard-financiera
+.\scripts\setup.ps1
+docker compose up -d --build
+```
+
+Abre la app en:
 
 ```text
-http://IP_DEL_SERVIDOR:8000/
+http://IP_DEL_EQUIPO:8000/
 ```
 
-Credenciales iniciales: las que pongas en `.env`:
+El script de setup crea `.env` con:
 
-```env
-APP_ADMIN_USER=admin
-APP_ADMIN_PASSWORD=cambia_esta_password
-```
+- usuario y password admin,
+- `APP_SECRET_KEY`,
+- `INTEGRATION_API_KEY` para n8n,
+- passwords de MariaDB,
+- puerto de la app.
 
-Docker Compose arranca:
+`.env` no debe subirse nunca al repositorio.
 
-- `dashboard-financiera`: app FastAPI + frontend.
-- `dashboard-financiera-db`: MariaDB con volumen persistente.
+## Que arranca Docker Compose
+
+- `dashboard-financiera`: FastAPI + frontend.
+- `dashboard-financiera-db`: MariaDB incluida.
 - `dashboard-financiera-telegram`: worker opcional para Telegram.
 
-Los datos de MariaDB viven en el volumen Docker `mariadb-data`.
+Los datos viven en el volumen Docker `mariadb-data`. Reiniciar Docker, la Raspberry o el PC no borra los movimientos.
 
-## Configuracion
+## Configuracion manual
 
-Variables principales de `.env`:
+Si no quieres usar los scripts, copia `.env.example`:
+
+```bash
+cp .env.example .env
+```
+
+Variables principales:
 
 ```env
 APP_PORT=8000
@@ -53,61 +78,44 @@ DB_PASSWORD=cambia_esta_password_db
 MARIADB_ROOT_PASSWORD=cambia_esta_password_root
 ```
 
-Para usar una MariaDB externa, cambia `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` y `DB_PASSWORD`. Ese usuario necesita permisos de lectura, escritura y migracion sobre la base de datos.
-
-Permisos recomendados para una MariaDB externa:
+Para usar una MariaDB externa, cambia `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` y `DB_PASSWORD`. Ese usuario necesita permisos de lectura, escritura y migracion:
 
 ```sql
 GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER ON finanzas.* TO 'dashboard_app'@'%';
 FLUSH PRIVILEGES;
 ```
 
-La app necesita `CREATE` y `ALTER` para crear o actualizar tablas como `banks`, `import_jobs` y `telegram_messages`.
-
 ## Funciones
 
 - Login simple para una cuenta por instalacion.
-- Dashboard mensual con gasto, ingresos, balance, media diaria y gasto anual.
+- Dashboard mensual con gastos, ingresos, balance, media diaria y gasto anual.
 - Graficos por categoria y periodo.
 - Filtros por fecha, categoria y tipo.
 - Alta, edicion y borrado de movimientos desde la web.
-- Gestion de bancos/cuentas con nombre y logo.
-- Selector horizontal deslizable de banco al crear o editar movimientos.
-- Importacion CSV/Excel con previsualizacion.
-- Exportacion a Excel de los movimientos filtrados.
-- Endpoint n8n protegido con API key.
-- Worker Telegram por polling, sin exponer la app publicamente.
+- Gestion de bancos/cuentas con selector deslizable.
+- Exportacion a Excel de movimientos filtrados.
+- Endpoint n8n protegido con `X-API-Key`.
+- Panel de integracion n8n dentro de la app.
+- Worker Telegram opcional por polling.
 - Modo oscuro/claro.
 
-## API principal
+## Integracion con n8n
 
-- `POST /api/auth/login`
-- `POST /api/auth/logout`
-- `GET /api/auth/me`
-- `GET /api/summary/month`
-- `GET /api/insights/month`
-- `GET /api/movements`
-- `POST /api/movements`
-- `PUT /api/movements/{id}`
-- `DELETE /api/movements/{id}`
-- `GET /api/banks`
-- `POST /api/banks`
-- `PUT /api/banks/{id}`
-- `DELETE /api/banks/{id}`
-- `POST /api/imports/preview`
-- `POST /api/imports/commit`
-- `GET /api/export/movements.xlsx`
-- `POST /api/integrations/n8n/movements`
+Cada usuario debe configurar su propio n8n contra su propia instalacion.
 
-La documentacion interactiva esta en:
+Endpoint:
 
 ```text
-http://IP_DEL_SERVIDOR:8000/docs
+POST http://IP_DEL_EQUIPO:8000/api/integrations/n8n/movements
 ```
 
-## Formato de movimiento
+Cabecera:
 
-Ejemplo JSON:
+```text
+X-API-Key: valor_de_INTEGRATION_API_KEY
+```
+
+Body JSON:
 
 ```json
 {
@@ -118,45 +126,57 @@ Ejemplo JSON:
   "subcategoria": "restaurante",
   "concepto": "Menu diario",
   "metodo_pago": "tarjeta",
-  "cuenta": "principal",
-  "nota": "",
-  "created_at": "2026-05-13T14:30:00"
+  "cuenta": "BBVA",
+  "nota": "Creado desde n8n",
+  "created_at": "2026-05-14T14:30:00"
 }
 ```
 
-El campo `cuenta` guarda el banco seleccionado. La pantalla de bancos permite registrar nombre y `logo_url`, y el selector de movimientos muestra esos bancos en una banda horizontal deslizable.
-
-## Bancos
-
-Ejemplo JSON:
-
-```json
-{
-  "name": "BBVA",
-  "logo_url": "https://...",
-  "is_active": true
-}
-```
-
-Al borrar un banco desde la app se oculta del selector, pero no se modifican los movimientos antiguos que ya lo usaban.
-
-## Integracion con n8n
-
-Endpoint:
+Hay una plantilla importable en:
 
 ```text
-POST /api/integrations/n8n/movements
+docs/n8n-movement-example.json
 ```
 
-Cabecera obligatoria:
+Dentro de la app, el panel **Integracion n8n** muestra la URL del endpoint, el nombre de la cabecera y un ejemplo JSON. La API key no se muestra completa en pantalla.
 
-```text
-X-API-Key: valor_de_INTEGRATION_API_KEY
+## Backups y restauracion
+
+Crear backup en Linux/Raspberry:
+
+```bash
+./scripts/backup.sh
 ```
 
-Body: el mismo formato JSON de movimiento.
+Crear backup en Windows:
 
-## Telegram
+```powershell
+.\scripts\backup.ps1
+```
+
+Los backups se guardan en `backups/` y no se suben a Git.
+
+Restaurar en Linux/Raspberry:
+
+```bash
+./scripts/restore.sh backups/finanzas-YYYYMMDD-HHMMSS.sql
+```
+
+Restaurar en Windows:
+
+```powershell
+.\scripts\restore.ps1 backups\finanzas-YYYYMMDD-HHMMSS.sql
+```
+
+Para mover la instalacion a otra maquina:
+
+1. Instala Docker en la nueva maquina.
+2. Copia el proyecto.
+3. Copia el `.env` si quieres mantener las mismas claves.
+4. Arranca `docker compose up -d --build`.
+5. Restaura el backup `.sql`.
+
+## Telegram opcional
 
 1. Crea un bot con BotFather.
 2. Copia el token en `.env`:
@@ -179,26 +199,32 @@ Comandos soportados:
 - `/resumen`
 - `/ayuda`
 
-El worker usa polling, asi que no necesitas abrir la app a Internet.
+El worker usa polling, asi que no necesitas exponer la app a Internet.
 
-## Importacion CSV/Excel
+## API principal
 
-Desde el dashboard puedes subir `.csv`, `.xlsx` o `.xls`.
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
+- `GET /api/summary/month`
+- `GET /api/insights/month`
+- `GET /api/movements`
+- `POST /api/movements`
+- `PUT /api/movements/{id}`
+- `DELETE /api/movements/{id}`
+- `GET /api/banks`
+- `POST /api/banks`
+- `PUT /api/banks/{id}`
+- `DELETE /api/banks/{id}`
+- `GET /api/integrations/status`
+- `POST /api/integrations/n8n/movements`
+- `GET /api/export/movements.xlsx`
 
-Columnas reconocidas:
+Documentacion interactiva:
 
-- `fecha` o `created_at`
-- `tipo`
-- `cantidad` o `importe`
-- `moneda`
-- `categoria`
-- `subcategoria`
-- `concepto` o `descripcion`
-- `metodo_pago` o `metodo de pago`
-- `cuenta`
-- `nota`
-
-La app previsualiza filas validas antes de importarlas.
+```text
+http://IP_DEL_EQUIPO:8000/docs
+```
 
 ## Desarrollo local sin Docker
 
@@ -210,9 +236,16 @@ Copy-Item .env.example .env
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-## Actualizar una instalacion systemd existente
+## Actualizar una instalacion existente
 
-Si usas la instalacion manual de Raspberry:
+Con Docker:
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+Con systemd manual en Raspberry:
 
 ```bash
 cd /home/pablo/dashboard-financiera
@@ -221,13 +254,13 @@ sudo systemctl restart dashboard-financiera
 sudo systemctl status dashboard-financiera
 ```
 
-Recuerda copiar los archivos nuevos antes de reiniciar.
+## Seguridad recomendada
 
-## Seguridad
-
+- Usa una instalacion por persona/hogar.
 - No subas `.env` a Git.
-- Cambia `APP_ADMIN_PASSWORD`, `APP_SECRET_KEY`, `INTEGRATION_API_KEY` y passwords de MariaDB.
-- No abras el puerto `8000` al publico sin HTTPS y una configuracion de seguridad revisada.
-- Para uso domestico, red local o Tailscale es lo recomendado.
+- Cambia passwords y claves si crees que se han compartido.
+- Usa red local o Tailscale.
+- No abras el puerto `8000` a Internet sin HTTPS y una revision de seguridad.
+- Haz backups antes de actualizar.
 
 El icono de Microsoft Excel usado en el boton de exportacion se guarda localmente en `app/static/vendor/microsoft-excel.svg` y procede de SVGL.

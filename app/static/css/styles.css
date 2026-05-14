@@ -207,11 +207,70 @@ h2 {
 
 .toolbar {
   display: grid;
-  grid-template-columns: repeat(5, minmax(140px, 1fr)) auto;
+  gap: 16px;
+  margin-top: 18px;
+  padding: 18px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 58%, var(--surface)), var(--surface));
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+}
+
+.toolbar-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: minmax(178px, 1.05fr) repeat(4, minmax(150px, 1fr)) minmax(132px, auto);
   gap: 14px;
   align-items: end;
-  margin-top: 18px;
-  padding: 16px;
+}
+
+.toolbar .field {
+  min-height: 76px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--line) 82%, var(--balance));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--input-bg) 82%, var(--surface-strong));
+}
+
+.toolbar input,
+.toolbar select {
+  height: 42px;
+  border-color: color-mix(in srgb, var(--line) 70%, var(--balance));
+}
+
+.field-month input {
+  min-width: 164px;
+  padding-right: 8px;
+  font-size: 0.95rem;
+}
+
+.filter-actions {
+  display: grid;
+  grid-template-columns: minmax(94px, 1fr) minmax(94px, 1fr);
+  gap: 8px;
+  align-self: end;
+}
+
+.filter-action-stack {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.filter-actions button {
+  width: 100%;
+  min-width: 118px;
+}
+
+.filter-actions .export-button {
+  height: 100%;
 }
 
 .field {
@@ -234,23 +293,38 @@ label {
 
 input,
 select,
+textarea,
 button {
-  height: 40px;
   border: 1px solid var(--line);
   border-radius: 6px;
   font: inherit;
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
   padding: 0 11px;
   background: var(--input-bg);
   color: var(--text);
 }
 
+input,
+select,
+button {
+  height: 40px;
+}
+
+textarea {
+  min-height: 142px;
+  padding: 11px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
 input:focus,
 select:focus,
+textarea:focus,
 button:focus-visible {
   outline: 2px solid var(--balance);
   outline-offset: 2px;
@@ -319,6 +393,17 @@ button.secondary {
   stroke-width: 2;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .theme-icon-moon {
   display: none;
 }
@@ -338,10 +423,95 @@ button.secondary {
   margin-top: 18px;
 }
 
+.integration-panel {
+  margin-top: 18px;
+}
+
+.integration-panel.ready {
+  display: none;
+}
+
+.integration-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(160px, 0.5fr);
+  gap: 14px;
+}
+
+.copy-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.copy-row-stack {
+  align-items: start;
+}
+
+.inline-code {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 11px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .movement-form {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
+}
+
+.movements-heading {
+  margin-bottom: 14px;
+}
+
+.movements-heading > div {
+  display: grid;
+  gap: 4px;
+}
+
+.add-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 999px;
+  background: var(--button-bg);
+  color: var(--button-text);
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.add-button[aria-expanded="true"] {
+  background: var(--balance);
+  color: #061018;
+}
+
+.movement-editor {
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--balance) 34%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-soft) 72%, var(--surface));
+}
+
+.movement-editor[hidden] {
+  display: none;
+}
+
+.editor-heading {
+  min-height: auto;
+  margin-bottom: 14px;
 }
 
 .wide {
@@ -361,23 +531,6 @@ button.secondary {
 
 .form-message.ok {
   color: var(--income);
-}
-
-.import-box {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-}
-
-.import-box input {
-  max-width: 280px;
-}
-
-.import-preview {
-  margin-top: 14px;
-  color: var(--muted);
-  font-size: 0.9rem;
 }
 
 .bank-rail {
@@ -614,16 +767,20 @@ td {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .toolbar {
+  .filter-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .actions {
+  .filter-actions {
     grid-column: 1 / -1;
   }
 
   .movement-form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .integration-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -644,9 +801,14 @@ td {
 
   .summary-grid,
   .content-grid,
-  .toolbar,
+  .filter-grid,
   .movement-form {
     grid-template-columns: 1fr;
+  }
+
+  .toolbar-heading {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .metric {
@@ -660,6 +822,14 @@ td {
 
   .actions {
     flex-direction: column;
+  }
+
+  .copy-row {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-actions {
+    grid-template-columns: 1fr;
   }
 
   button {

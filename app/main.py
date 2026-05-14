@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.auth import authenticate_user, clear_session_cookie, require_api_key, require_auth, set_session_cookie
 from app.banks import create_bank, delete_bank, list_banks, update_bank
+from app.config import get_settings
 from app.database import fetch_one
 from app.export_excel import build_export_workbook
 from app.importer import commit_import, preview_import
@@ -226,6 +227,19 @@ def categories(_: str = Depends(require_auth)):
 @app.get("/api/types")
 def movement_types(_: str = Depends(require_auth)):
     return run_db_query(get_movement_types)
+
+
+@app.get("/api/integrations/status")
+def integrations_status(request: Request, _: str = Depends(require_auth)):
+    settings = get_settings()
+    n8n_path = "/api/integrations/n8n/movements"
+    return {
+        "n8n_endpoint": n8n_path,
+        "n8n_endpoint_url": str(request.base_url).rstrip("/") + n8n_path,
+        "api_key_configured": bool(settings.integration_api_key)
+        and settings.integration_api_key != "change-this-api-key",
+        "api_key_header": "X-API-Key",
+    }
 
 
 @app.get("/api/banks")

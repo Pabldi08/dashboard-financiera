@@ -4,7 +4,6 @@ const state = {
   currency: "EUR",
   categoryRows: [],
   periodRows: [],
-  importRows: [],
   banks: [],
 };
 
@@ -47,6 +46,16 @@ const elements = {
   applyFilters: document.querySelector("#applyFilters"),
   resetFilters: document.querySelector("#resetFilters"),
   exportExcel: document.querySelector("#exportExcel"),
+  integrationPanel: document.querySelector("#integrationPanel"),
+  n8nStatus: document.querySelector("#n8nStatus"),
+  n8nEndpoint: document.querySelector("#n8nEndpoint"),
+  n8nHeader: document.querySelector("#n8nHeader"),
+  n8nKeyState: document.querySelector("#n8nKeyState"),
+  n8nExample: document.querySelector("#n8nExample"),
+  copyN8nEndpoint: document.querySelector("#copyN8nEndpoint"),
+  copyN8nExample: document.querySelector("#copyN8nExample"),
+  toggleMovementForm: document.querySelector("#toggleMovementForm"),
+  movementEditor: document.querySelector("#movementEditor"),
   movementForm: document.querySelector("#movementForm"),
   movementFormMode: document.querySelector("#movementFormMode"),
   movementId: document.querySelector("#movementId"),
@@ -58,16 +67,10 @@ const elements = {
   movementConcept: document.querySelector("#movementConcept"),
   movementPayment: document.querySelector("#movementPayment"),
   movementAccount: document.querySelector("#movementAccount"),
-  bankRail: document.querySelector("#bankRail"),
   openBanksPanel: document.querySelector("#openBanksPanel"),
   movementNote: document.querySelector("#movementNote"),
   movementMessage: document.querySelector("#movementMessage"),
   cancelEdit: document.querySelector("#cancelEdit"),
-  importFile: document.querySelector("#importFile"),
-  previewImport: document.querySelector("#previewImport"),
-  commitImport: document.querySelector("#commitImport"),
-  importStatus: document.querySelector("#importStatus"),
-  importPreview: document.querySelector("#importPreview"),
   categoryTotal: document.querySelector("#categoryTotal"),
   categoryEmpty: document.querySelector("#categoryEmpty"),
   periodEmpty: document.querySelector("#periodEmpty"),
@@ -219,8 +222,68 @@ async function loadOptions() {
   });
 
   state.banks = banks;
-  renderBankRail();
+  renderBankDropdown();
   renderBankList();
+}
+
+function integrationExampleJson() {
+  return JSON.stringify(
+    {
+      tipo: "gasto",
+      cantidad: 12.5,
+      moneda: "EUR",
+      categoria: "comida",
+      subcategoria: "restaurante",
+      concepto: "Menu diario",
+      metodo_pago: "tarjeta",
+      cuenta: "BBVA",
+      nota: "Creado desde n8n",
+      created_at: "2026-05-14T14:30:00",
+    },
+    null,
+    2,
+  );
+}
+
+async function loadIntegrationStatus() {
+  try {
+    const status = await fetchJson("/api/integrations/status");
+    elements.integrationPanel.classList.toggle("ready", status.api_key_configured);
+    elements.integrationPanel.setAttribute("aria-hidden", String(status.api_key_configured));
+    elements.n8nEndpoint.value = status.n8n_endpoint_url;
+    elements.n8nHeader.textContent = `${status.api_key_header}: tu INTEGRATION_API_KEY`;
+    elements.n8nKeyState.textContent = status.api_key_configured ? "Configurada" : "Pendiente en .env";
+    elements.n8nStatus.textContent = status.api_key_configured ? "Lista" : "Falta API key";
+    elements.n8nStatus.className = `status-pill ${status.api_key_configured ? "ok" : "error"}`;
+  } catch (error) {
+    console.error(error);
+    elements.integrationPanel.classList.remove("ready");
+    elements.integrationPanel.setAttribute("aria-hidden", "false");
+    elements.n8nStatus.textContent = "No disponible";
+    elements.n8nStatus.className = "status-pill error";
+  }
+  elements.n8nExample.value = integrationExampleJson();
+}
+
+async function copyText(value, button, confirmationText) {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(value);
+  } else {
+    const helper = document.createElement("textarea");
+    helper.value = value;
+    helper.setAttribute("readonly", "");
+    helper.style.position = "fixed";
+    helper.style.left = "-9999px";
+    document.body.append(helper);
+    helper.select();
+    document.execCommand("copy");
+    helper.remove();
+  }
+  const previous = button.textContent;
+  button.textContent = confirmationText;
+  window.setTimeout(() => {
+    button.textContent = previous;
+  }, 1400);
 }
 
 function bankInitials(name) {
@@ -253,8 +316,25 @@ function bankFallbackNode(name) {
   return fallback;
 }
 
-function renderBankRail() {
-  elements.bankRail.replaceChildren();
+function renderBankDropdown(extraValue = "") {
+  const selectedValue = extraValue || elements.movementAccount.value;
+  elements.movementAccount.replaceChildren(new Option("Selecciona un banco", ""));
+
+  state.banks.forEach((bank) => {
+    elements.movementAccount.append(new Option(bank.name, bank.name));
+  });
+
+  if (selectedValue && !state.banks.some((bank) => bank.name === selectedValue)) {
+    elements.movementAccount.append(new Option(selectedValue, selectedValue));
+  }
+
+  elements.movementAccount.value = selectedValue || "";
+}
+
+function renderBankSelect(extraValue = "") {
+  return renderBankDropdown(extraValue);
+  const selectedValue = extraValue || elements.movementAccount.value;
+  elements.movementAccount.replaceChildren(new Option("Selecciona un banco", ""));
   if (!state.banks.length) {
     const empty = document.createElement("button");
     empty.type = "button";
@@ -283,7 +363,7 @@ function renderBankRail() {
 
 function selectBank(name) {
   elements.movementAccount.value = name;
-  renderBankRail();
+  renderBankDropdown(name);
 }
 
 function renderBankList() {
@@ -534,7 +614,7 @@ async function initializeDashboard() {
   try {
     await ensureAuthenticated();
     await fetchJson("/api/db-health");
-    await Promise.all([loadSummary(), loadOptions()]);
+    await Promise.all([loadSummary(), loadOptions(), loadIntegrationStatus()]);
     await loadDashboardData();
   } catch (error) {
     console.error(error);
@@ -592,6 +672,7 @@ function movementPayloadFromForm() {
 }
 
 function fillMovementForm(row) {
+  openMovementEditor();
   elements.movementId.value = row.id;
   elements.movementType.value = row.tipo || "gasto";
   elements.movementAmount.value = row.cantidad || "";
@@ -601,9 +682,10 @@ function fillMovementForm(row) {
   elements.movementConcept.value = row.concepto || "";
   elements.movementPayment.value = row.metodo_pago || "";
   elements.movementAccount.value = row.cuenta || "";
-  renderBankRail();
+  renderBankDropdown(row.cuenta || "");
   elements.movementNote.value = row.nota || "";
   elements.movementFormMode.textContent = `Editando #${row.id}`;
+  elements.movementAmount.focus();
 }
 
 function resetMovementForm() {
@@ -611,8 +693,31 @@ function resetMovementForm() {
   elements.movementId.value = "";
   elements.movementDate.value = currentDateTimeInputValue();
   elements.movementAccount.value = "";
-  renderBankRail();
+  renderBankDropdown();
   elements.movementFormMode.textContent = "Alta manual";
+  setMessage(elements.movementMessage, "");
+}
+
+function openMovementEditor() {
+  elements.movementEditor.hidden = false;
+  elements.toggleMovementForm.setAttribute("aria-expanded", "true");
+  elements.toggleMovementForm.title = "Cerrar formulario";
+  requestAnimationFrame(() => {
+    elements.movementEditor.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  });
+}
+
+function closeMovementEditor() {
+  resetMovementForm();
+  elements.movementEditor.hidden = true;
+  elements.toggleMovementForm.setAttribute("aria-expanded", "false");
+  elements.toggleMovementForm.title = "Nuevo movimiento";
+}
+
+function startNewMovement() {
+  resetMovementForm();
+  openMovementEditor();
+  elements.movementType.focus();
 }
 
 function openBanksModal() {
@@ -728,6 +833,22 @@ elements.exportExcel.addEventListener("click", () => {
   window.location.href = `/api/export/movements.xlsx${query}`;
 });
 
+elements.copyN8nEndpoint.addEventListener("click", () => {
+  copyText(elements.n8nEndpoint.value, elements.copyN8nEndpoint, "Copiado").catch(console.error);
+});
+
+elements.copyN8nExample.addEventListener("click", () => {
+  copyText(elements.n8nExample.value, elements.copyN8nExample, "Copiado").catch(console.error);
+});
+
+elements.toggleMovementForm.addEventListener("click", () => {
+  if (elements.movementEditor.hidden) {
+    startNewMovement();
+  } else {
+    closeMovementEditor();
+  }
+});
+
 elements.loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   setMessage(elements.loginMessage, "Entrando...");
@@ -769,12 +890,12 @@ elements.movementForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  resetMovementForm();
+  closeMovementEditor();
   setMessage(elements.movementMessage, "Movimiento guardado", "ok");
   await Promise.all([loadOptions(), loadDashboardData()]);
 });
 
-elements.cancelEdit.addEventListener("click", resetMovementForm);
+elements.cancelEdit.addEventListener("click", closeMovementEditor);
 
 elements.openBanksPanel.addEventListener("click", openBanksModal);
 elements.closeBanksPanel.addEventListener("click", closeBanksModal);
@@ -782,42 +903,6 @@ elements.cancelBankEdit.addEventListener("click", resetBankForm);
 elements.bankForm.addEventListener("submit", saveBank);
 elements.banksModal.addEventListener("click", (event) => {
   if (event.target === elements.banksModal) closeBanksModal();
-});
-
-elements.previewImport.addEventListener("click", async () => {
-  const file = elements.importFile.files[0];
-  if (!file) return;
-
-  const formData = new FormData();
-  formData.append("file", file);
-  const response = await fetch("/api/imports/preview", { method: "POST", body: formData });
-  if (!response.ok) {
-    elements.importStatus.textContent = "Error al previsualizar";
-    return;
-  }
-
-  const preview = await response.json();
-  state.importRows = preview.preview_rows;
-  elements.importStatus.textContent = `${preview.preview_rows.length} filas validas de ${preview.total_rows}`;
-  elements.importPreview.textContent = preview.errors.length
-    ? `Errores: ${preview.errors.map((error) => `fila ${error.row}: ${error.error}`).join("; ")}`
-    : "Sin errores en la previsualizacion";
-});
-
-elements.commitImport.addEventListener("click", async () => {
-  if (!state.importRows.length) return;
-  const response = await fetch("/api/imports/commit", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      filename: elements.importFile.files[0]?.name || "importacion",
-      rows: state.importRows,
-    }),
-  });
-  const result = await response.json();
-  elements.importStatus.textContent = `${result.imported_rows} filas importadas`;
-  state.importRows = [];
-  await Promise.all([loadOptions(), loadDashboardData()]);
 });
 
 elements.themeToggle.addEventListener("click", () => {

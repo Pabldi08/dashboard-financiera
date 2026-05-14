@@ -26,8 +26,8 @@ def create_movement(payload: MovementPayload) -> dict[str, Any]:
         """,
         (
             payload.pendiente_id,
-            payload.telegram_user_id,
-            payload.chat_id,
+            payload.telegram_user_id or 0,
+            payload.chat_id or 0,
             payload.tipo,
             payload.cantidad,
             payload.moneda,

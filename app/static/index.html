@@ -4,9 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>dashboard financiera</title>
-    <link rel="stylesheet" href="/static/css/styles.css?v=20260514-banks">
+    <link rel="stylesheet" href="/static/css/styles.css?v=20260514-n8n-bank-filter">
     <script src="/static/vendor/chart.umd.min.js" defer></script>
-    <script src="/static/js/dashboard.js?v=20260514-banks" defer></script>
+    <script src="/static/js/dashboard.js?v=20260514-n8n-bank-filter" defer></script>
   </head>
   <body class="auth-login">
     <section class="login-view" id="loginView">
@@ -82,43 +82,125 @@
       </section>
 
       <section class="toolbar" aria-label="Filtros">
-        <div class="field">
-          <label for="monthFilter">Mes</label>
-          <input type="month" id="monthFilter">
+        <div class="toolbar-heading">
+          <div>
+            <p class="eyebrow">Vista actual</p>
+            <h2>Filtros</h2>
+          </div>
+          <span class="muted">Ajusta fechas, categoria y tipo de movimiento</span>
         </div>
-        <div class="field">
-          <label for="startDate">Desde</label>
-          <input type="date" id="startDate">
+        <div class="filter-grid">
+          <div class="field field-month">
+            <label for="monthFilter">Mes</label>
+            <input type="month" id="monthFilter">
+          </div>
+          <div class="field">
+            <label for="startDate">Desde</label>
+            <input type="date" id="startDate">
+          </div>
+          <div class="field">
+            <label for="endDate">Hasta</label>
+            <input type="date" id="endDate">
+          </div>
+          <div class="field">
+            <label for="categoryFilter">Categoria</label>
+            <select id="categoryFilter">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="typeFilter">Tipo</label>
+            <select id="typeFilter">
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div class="filter-actions">
+            <div class="filter-action-stack">
+              <button type="button" id="applyFilters">Aplicar</button>
+              <button type="button" class="secondary" id="resetFilters">Limpiar</button>
+            </div>
+            <button type="button" class="secondary export-button" id="exportExcel">
+              <img src="/static/vendor/microsoft-excel.svg" alt="" aria-hidden="true">
+              Excel
+            </button>
+          </div>
         </div>
-        <div class="field">
-          <label for="endDate">Hasta</label>
-          <input type="date" id="endDate">
+      </section>
+
+      <section class="panel integration-panel" id="integrationPanel" aria-label="Integracion n8n">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Instalacion privada</p>
+            <h2>Integracion n8n</h2>
+          </div>
+          <span class="status-pill" id="n8nStatus">Revisando</span>
         </div>
-        <div class="field">
-          <label for="categoryFilter">Categoria</label>
-          <select id="categoryFilter">
-            <option value="">Todas</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="typeFilter">Tipo</label>
-          <select id="typeFilter">
-            <option value="">Todos</option>
-          </select>
-        </div>
-        <div class="actions">
-          <button type="button" id="applyFilters">Aplicar</button>
-          <button type="button" class="secondary" id="resetFilters">Limpiar</button>
-          <button type="button" class="secondary export-button" id="exportExcel">
-            <img src="/static/vendor/microsoft-excel.svg" alt="" aria-hidden="true">
-            Excel
-          </button>
+        <div class="integration-grid">
+          <div class="field wide">
+            <label for="n8nEndpoint">Endpoint</label>
+            <div class="copy-row">
+              <input id="n8nEndpoint" readonly>
+              <button type="button" class="secondary" id="copyN8nEndpoint">Copiar</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Cabecera</label>
+            <code class="inline-code" id="n8nHeader">X-API-Key</code>
+          </div>
+          <div class="field">
+            <label>Clave API</label>
+            <code class="inline-code" id="n8nKeyState">No visible</code>
+          </div>
+          <div class="field wide">
+            <label for="n8nExample">Ejemplo JSON</label>
+            <div class="copy-row copy-row-stack">
+              <textarea id="n8nExample" readonly rows="8"></textarea>
+              <button type="button" class="secondary" id="copyN8nExample">Copiar ejemplo</button>
+            </div>
+          </div>
         </div>
       </section>
 
       <section class="content-grid">
-        <article class="panel">
+        <article class="panel chart-panel">
           <div class="panel-heading">
+            <h2>Gastos por categoria</h2>
+            <span id="categoryTotal" class="muted"></span>
+          </div>
+          <div class="chart-box">
+            <canvas id="categoryChart"></canvas>
+            <p class="empty-state" id="categoryEmpty">Sin gastos para mostrar</p>
+          </div>
+        </article>
+
+        <article class="panel chart-panel">
+          <div class="panel-heading">
+            <h2>Gastos en el tiempo</h2>
+            <select id="periodFilter" aria-label="Periodo del grafico">
+              <option value="day">Por dia</option>
+              <option value="month">Por mes</option>
+            </select>
+          </div>
+          <div class="chart-box">
+            <canvas id="periodChart"></canvas>
+            <p class="empty-state" id="periodEmpty">Sin gastos para mostrar</p>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="panel-heading movements-heading">
+          <div>
+            <h2>Movimientos</h2>
+            <span class="muted" id="tableCount"></span>
+          </div>
+          <button type="button" class="add-button" id="toggleMovementForm" aria-expanded="false" aria-controls="movementEditor" title="Nuevo movimiento">
+            <span aria-hidden="true">+</span>
+            <span class="sr-only">Nuevo movimiento</span>
+          </button>
+        </div>
+        <div class="movement-editor" id="movementEditor" hidden>
+          <div class="panel-heading editor-heading">
             <h2>Nuevo movimiento</h2>
             <span class="muted" id="movementFormMode">Alta manual</span>
           </div>
@@ -160,8 +242,9 @@
                 <label for="movementAccount">Banco / cuenta</label>
                 <button type="button" class="link-button" id="openBanksPanel">Gestionar bancos</button>
               </div>
-              <input type="hidden" id="movementAccount">
-              <div class="bank-rail" id="bankRail" aria-label="Seleccionar banco"></div>
+              <select id="movementAccount">
+                <option value="">Selecciona un banco</option>
+              </select>
             </div>
             <div class="field wide">
               <label for="movementNote">Nota</label>
@@ -173,53 +256,6 @@
             </div>
           </form>
           <p class="form-message" id="movementMessage"></p>
-        </article>
-
-        <article class="panel">
-          <div class="panel-heading">
-            <h2>Importar CSV/Excel</h2>
-            <span class="muted" id="importStatus">Sin archivo</span>
-          </div>
-          <div class="import-box">
-            <input type="file" id="importFile" accept=".csv,.xlsx,.xls">
-            <button type="button" id="previewImport">Previsualizar</button>
-            <button type="button" class="secondary" id="commitImport">Importar filas validas</button>
-          </div>
-          <div class="import-preview" id="importPreview"></div>
-        </article>
-      </section>
-
-      <section class="content-grid">
-        <article class="panel chart-panel">
-          <div class="panel-heading">
-            <h2>Gastos por categoria</h2>
-            <span id="categoryTotal" class="muted"></span>
-          </div>
-          <div class="chart-box">
-            <canvas id="categoryChart"></canvas>
-            <p class="empty-state" id="categoryEmpty">Sin gastos para mostrar</p>
-          </div>
-        </article>
-
-        <article class="panel chart-panel">
-          <div class="panel-heading">
-            <h2>Gastos en el tiempo</h2>
-            <select id="periodFilter" aria-label="Periodo del grafico">
-              <option value="day">Por dia</option>
-              <option value="month">Por mes</option>
-            </select>
-          </div>
-          <div class="chart-box">
-            <canvas id="periodChart"></canvas>
-            <p class="empty-state" id="periodEmpty">Sin gastos para mostrar</p>
-          </div>
-        </article>
-      </section>
-
-      <section class="panel table-panel">
-        <div class="panel-heading">
-          <h2>Movimientos</h2>
-          <span class="muted" id="tableCount"></span>
         </div>
         <div class="table-wrap">
           <table>

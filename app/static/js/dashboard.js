@@ -90,6 +90,9 @@ const elements = {
   bankMessage: document.querySelector("#bankMessage"),
   bankList: document.querySelector("#bankList"),
   cancelBankEdit: document.querySelector("#cancelBankEdit"),
+  fab: document.querySelector("#fab"),
+  toggleExtraFields: document.querySelector("#toggleExtraFields"),
+  categoryList: document.querySelector("#categoryList"),
 };
 
 function getStoredTheme() {
@@ -216,8 +219,12 @@ async function loadOptions() {
   }
 
   elements.categoryFilter.replaceChildren(new Option("Todas", ""));
+  elements.categoryList.replaceChildren();
   categories.forEach((item) => {
     elements.categoryFilter.append(new Option(item.category, item.category));
+    const option = document.createElement("option");
+    option.value = item.category;
+    elements.categoryList.append(option);
   });
 
   elements.typeFilter.replaceChildren(new Option("Todos", ""));
@@ -689,7 +696,18 @@ function fillMovementForm(row) {
   renderBankDropdown(row.cuenta || "");
   elements.movementNote.value = row.nota || "";
   elements.movementFormMode.textContent = `Editando #${row.id}`;
+  const hasExtra = row.subcategoria || row.concepto || row.metodo_pago || row.cuenta || row.nota;
+  showExtraFields(Boolean(hasExtra));
   elements.movementAmount.focus();
+}
+
+function showExtraFields(show) {
+  document.querySelectorAll(".extra-field").forEach((field) => {
+    field.hidden = !show;
+  });
+  elements.toggleExtraFields.innerHTML = show
+    ? "&#9662; Menos opciones"
+    : "&#9656; Más opciones";
 }
 
 function resetMovementForm() {
@@ -698,6 +716,7 @@ function resetMovementForm() {
   elements.movementDate.value = currentDateTimeInputValue();
   elements.movementAccount.value = "";
   renderBankDropdown();
+  showExtraFields(false);
   elements.movementFormMode.textContent = "Alta manual";
   setMessage(elements.movementMessage, "");
 }
@@ -706,6 +725,7 @@ function openMovementEditor() {
   elements.movementEditor.hidden = false;
   elements.toggleMovementForm.setAttribute("aria-expanded", "true");
   elements.toggleMovementForm.title = "Cerrar formulario";
+  document.body.classList.add("mobile-form-open");
   requestAnimationFrame(() => {
     elements.movementEditor.scrollIntoView({ behavior: "smooth", block: "nearest" });
   });
@@ -716,6 +736,7 @@ function closeMovementEditor() {
   elements.movementEditor.hidden = true;
   elements.toggleMovementForm.setAttribute("aria-expanded", "false");
   elements.toggleMovementForm.title = "Nuevo movimiento";
+  document.body.classList.remove("mobile-form-open");
 }
 
 function startNewMovement() {
@@ -861,6 +882,13 @@ elements.toggleMovementForm.addEventListener("click", () => {
   } else {
     closeMovementEditor();
   }
+});
+
+elements.fab.addEventListener("click", startNewMovement);
+
+elements.toggleExtraFields.addEventListener("click", () => {
+  const currentlyHidden = document.querySelector(".extra-field").hidden;
+  showExtraFields(currentlyHidden);
 });
 
 elements.loginForm.addEventListener("submit", async (event) => {

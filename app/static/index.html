@@ -4,9 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>dashboard financiera</title>
-    <link rel="stylesheet" href="/static/css/styles.css?v=20260514-connections-menu">
+    <link rel="stylesheet" href="/static/css/styles.css?v=20260515-form-basic">
     <script src="/static/vendor/chart.umd.min.js" defer></script>
-    <script src="/static/js/dashboard.js?v=20260514-connections-menu" defer></script>
+    <script src="/static/js/dashboard.js?v=20260515-form-basic" defer></script>
   </head>
   <body class="auth-login">
     <section class="login-view" id="loginView">
@@ -205,26 +205,30 @@
               <input id="movementAmount" type="number" step="0.01" min="0.01" required>
             </div>
             <div class="field">
+              <label for="movementCategory">Categoria</label>
+              <input id="movementCategory" list="categoryList" autocomplete="off">
+              <datalist id="categoryList"></datalist>
+            </div>
+            <div class="field">
               <label for="movementDate">Fecha</label>
               <input id="movementDate" type="datetime-local">
             </div>
-            <div class="field">
-              <label for="movementCategory">Categoria</label>
-              <input id="movementCategory">
+            <div class="wide form-toggle-row">
+              <button type="button" class="link-button" id="toggleExtraFields">&#9656; Más opciones</button>
             </div>
-            <div class="field">
+            <div class="field extra-field" hidden>
               <label for="movementSubcategory">Subcategoria</label>
               <input id="movementSubcategory">
             </div>
-            <div class="field">
+            <div class="field extra-field" hidden>
               <label for="movementConcept">Concepto</label>
               <input id="movementConcept">
             </div>
-            <div class="field">
+            <div class="field extra-field" hidden>
               <label for="movementPayment">Metodo</label>
               <input id="movementPayment">
             </div>
-            <div class="field wide">
+            <div class="field wide extra-field" hidden>
               <div class="inline-label">
                 <label for="movementAccount">Banco / cuenta</label>
                 <button type="button" class="link-button" id="openBanksPanel">Gestionar bancos</button>
@@ -233,7 +237,7 @@
                 <option value="">Selecciona un banco</option>
               </select>
             </div>
-            <div class="field wide">
+            <div class="field wide extra-field" hidden>
               <label for="movementNote">Nota</label>
               <input id="movementNote">
             </div>
@@ -263,6 +267,11 @@
         <p class="empty-table" id="tableEmpty">No hay movimientos con estos filtros</p>
       </section>
     </main>
+
+    <button type="button" class="fab app-shell" id="fab" aria-label="Nuevo movimiento">
+      <span aria-hidden="true">+</span>
+      <span class="sr-only">Nuevo movimiento</span>
+    </button>
 
     <section class="modal-backdrop" id="connectionsModal" aria-hidden="true">
       <div class="modal-panel connections-panel" role="dialog" aria-modal="true" aria-labelledby="connectionsTitle">
